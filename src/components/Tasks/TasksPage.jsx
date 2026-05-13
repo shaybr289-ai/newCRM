@@ -409,6 +409,12 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
     dueDate: initialTask.due_date ? String(initialTask.due_date).split('T')[0] : '',
     startTime: initialTask.start_time ? String(initialTask.start_time).slice(0, 5) : '',
     durationMinutes: initialTask.duration_minutes || '',
+    statusForms: (() => {
+      const sf = initialTask.status_forms;
+      if (!sf) return {};
+      if (typeof sf === 'string') { try { return JSON.parse(sf); } catch { return {}; } }
+      return sf;
+    })(),
     status: initialTask.status || 'new',
     assigneeIds: initialTask.assignee_ids || [],
     contactIds: initialTask.contact_ids || [],
@@ -451,12 +457,10 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
     }
   }, [actsData, form.id]);
 
-  // Load forms catalog once (for new-task picker)
+  // Load forms catalog (for new-task picker + status→form mapping)
   useEffect(() => {
-    if (!form.id) {
-      api.get('/api/forms-list').then(r => setAllForms(r.data || [])).catch(() => {});
-    }
-  }, [form.id]);
+    api.get('/api/forms-list').then(r => setAllForms(r.data || [])).catch(() => {});
+  }, []);
 
   const upd = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -509,6 +513,7 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
         dueDate: form.dueDate || null,
         startTime: form.startTime || null,
         durationMinutes: form.durationMinutes ? parseInt(form.durationMinutes) : null,
+        statusForms: Object.fromEntries(Object.entries(form.statusForms || {}).filter(([, v]) => v)),
         status: form.status,
         assigneeIds: form.assigneeIds, contactIds: form.contactIds,
       };
@@ -639,6 +644,49 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
             <textarea value={form.notes} onChange={e => upd('notes', e.target.value)} rows={3} placeholder="מידע נוסף על המשימה..." />
           </div>
         </div>
+
+        {/* ── Status → Form mapping ── */}
+        {allForms.length > 0 && (
+          <>
+            <h3 className="form-section-title">שיוך טפסים לסטטוסים</h3>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: -8, marginBottom: 12 }}>
+              כשעובד בשטח יבחר סטטוס מסוים — הטופס המשויך יופיע אוטומטית במסך המשימה.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+              {statusList.filter(([v]) => v !== 'new').map(([statusKey, statusLabel]) => {
+                const def = statusDefs[statusKey] || {};
+                return (
+                  <div key={statusKey} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{
+                      minWidth: 80, padding: '4px 10px', borderRadius: 20,
+                      fontSize: 12, fontWeight: 700, textAlign: 'center',
+                      background: def.bg || '#E5E7EB',
+                      color: def.text || def.color || '#475569',
+                      flexShrink: 0,
+                    }}>{statusLabel}</span>
+                    <select
+                      value={form.statusForms[statusKey] || ''}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setForm(p => {
+                          const next = { ...p.statusForms };
+                          if (val) next[statusKey] = val; else delete next[statusKey];
+                          return { ...p, statusForms: next };
+                        });
+                      }}
+                      style={{ flex: 1 }}
+                    >
+                      <option value="">— ללא טופס —</option>
+                      {allForms.map(f => (
+                        <option key={f.id} value={f.id}>{f.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
 
         {/* ── אנשי קשר של הלקוח (right after notes) ── */}
         <h3 className="form-section-title">אנשי קשר של הלקוח (בחירה מרובה)</h3>
