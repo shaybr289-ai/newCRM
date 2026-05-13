@@ -1,0 +1,510 @@
+/* ── FieldOps Design System — Tasks Dashboard ─────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap');
+
+.tdb-page {
+  font-family: 'Rubik', sans-serif;
+  direction: rtl;
+  background: #F0F7FF;
+  min-height: 100%;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Top Bar ─────────────────────────────────────────────────────────────── */
+.tdb-topbar {
+  background: #074876;
+  color: #fff;
+  padding: 14px 22px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.tdb-topbar-left { display: flex; align-items: center; gap: 10px; }
+.tdb-topbar-icon { font-size: 20px; }
+.tdb-topbar-title { margin: 0; font-size: 17px; font-weight: 700; }
+.tdb-topbar-right { display: flex; align-items: center; gap: 10px; font-size: 12px; opacity: .9; }
+.tdb-calendar-btn {
+  background: rgba(255,255,255,.15);
+  border: 1px solid rgba(255,255,255,.3);
+  color: #fff;
+  padding: 5px 14px; border-radius: 8px;
+  font-family: 'Rubik', sans-serif;
+  font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: background .15s;
+  display: flex; align-items: center; gap: 6px;
+}
+.tdb-calendar-btn:hover { background: rgba(255,255,255,.28); }
+.tdb-live-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #00C875;
+  box-shadow: 0 0 0 3px rgba(0,200,117,.3);
+}
+
+/* ── Toolbar ──────────────────────────────────────────────────────────────── */
+.tdb-toolbar {
+  background: #fff;
+  border: 1.5px solid #C5E3F7;
+  border-radius: 14px;
+  padding: 10px 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  overflow: visible;
+}
+.tdb-filter-group { display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; }
+.tdb-filter-label { font-size: 11px; font-weight: 600; color: #5B7FA6; white-space: nowrap; align-self: flex-end; margin-bottom: 7px; }
+
+/* vertical divider between employee filters and period filters */
+.tdb-toolbar-divider {
+  width: 1px;
+  align-self: stretch;
+  background: #C5E3F7;
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+.tdb-select {
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1.5px solid #C5E3F7;
+  background: #fff;
+  color: #042C53;
+  font-size: 12px;
+  font-family: 'Rubik', sans-serif;
+  direction: rtl;
+  cursor: pointer;
+  min-width: 140px;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.tdb-emp-btn {
+  position: relative;
+  text-align: right;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tdb-emp-badge {
+  background: #1A91D9; color: #fff;
+  border-radius: 10px; padding: 1px 7px;
+  font-size: 10px; font-weight: 700;
+}
+.tdb-emp-picker {
+  position: absolute;
+  top: 100%; right: 0; margin-top: 4px;
+  background: #fff;
+  border: 1.5px solid #C5E3F7;
+  border-radius: 10px;
+  min-width: 210px; max-height: 240px;
+  overflow-y: auto;
+  z-index: 100;
+  box-shadow: 0 8px 24px rgba(2,31,54,.15);
+}
+.tdb-emp-clear {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 12px; font-weight: 600;
+  color: #0A5E9A;
+  border-bottom: 1px solid #E8F4FD;
+}
+.tdb-emp-clear:hover { background: #E8F4FD; }
+.tdb-emp-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 12px;
+  cursor: pointer; font-size: 12px; color: #042C53;
+}
+.tdb-emp-item:hover { background: #E8F4FD; }
+
+/* ── Period buttons (inside toolbar) ─────────────────────────────────────── */
+.tdb-period-btn {
+  padding: 5px 12px;
+  border-radius: 10px;
+  border: 1px solid #C5E3F7;
+  background: #fff;
+  color: #0A5E9A;
+  font-size: 12px; font-weight: 600;
+  cursor: pointer;
+  font-family: 'Rubik', sans-serif;
+  transition: all .15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.tdb-period-btn:hover  { background: #E8F4FD; }
+.tdb-period-btn.active { background: #1A91D9; color: #fff; border-color: #1A91D9; }
+.tdb-date-input {
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1.5px solid #C5E3F7;
+  background: #F0F7FF;
+  color: #042C53;
+  font-size: 12px;
+  font-family: 'Rubik', sans-serif;
+  width: 130px;
+  flex-shrink: 0;
+}
+
+/* ── KPI Cards ────────────────────────────────────────────────────────────── */
+.tdb-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+.tdb-kpi-card {
+  background: #fff;
+  border: 1.5px solid #C5E3F7;
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+.tdb-kpi-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+.tdb-kpi-label  { font-size: 11px; font-weight: 500; color: #5B7FA6; }
+.tdb-kpi-icon   { font-size: 14px; opacity: .55; }
+.tdb-kpi-val    { font-size: 22px; font-weight: 700; }
+.tdb-kpi-sub    { font-size: 11px; color: #5B7FA6; margin-top: 3px; }
+
+/* ── Section heading ──────────────────────────────────────────────────────── */
+.tdb-section-heading {
+  font-size: 12px; font-weight: 600;
+  color: #5B7FA6;
+  text-align: left;
+}
+
+/* ── Employee Grid ────────────────────────────────────────────────────────── */
+.tdb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+}
+
+/* ── Employee Card ────────────────────────────────────────────────────────── */
+.tdb-card {
+  background: #fff;
+  border: 1.5px solid #C5E3F7;
+  border-radius: 16px;
+  padding: 14px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(2,31,54,.06);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.tdb-card:hover {
+  border-color: #1A91D9;
+  box-shadow: 0 4px 16px rgba(2,31,54,.12);
+}
+.tdb-card.has-late {
+  border-right: 3px solid #E2445C;
+}
+
+.tdb-card-header {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 10px;
+}
+.tdb-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; flex-shrink: 0;
+}
+.tdb-card-identity { flex: 1; min-width: 0; }
+.tdb-card-name { font-size: 13px; font-weight: 600; color: #042C53; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tdb-card-role { font-size: 11px; color: #5B7FA6; }
+.tdb-card-pct  { text-align: left; flex-shrink: 0; }
+.tdb-card-pct-val   { font-size: 19px; font-weight: 700; line-height: 1; }
+.tdb-card-pct-label { font-size: 10px; color: #5B7FA6; }
+
+.tdb-card-stats {
+  display: grid; grid-template-columns: repeat(4,1fr);
+  gap: 6px; margin-bottom: 10px;
+}
+.tdb-stat-box {
+  background: #F0F7FF; border-radius: 8px;
+  padding: 6px 4px; text-align: center;
+}
+.tdb-stat-val   { font-size: 16px; font-weight: 700; }
+.tdb-stat-label { font-size: 9px; color: #5B7FA6; margin-top: 1px; }
+
+.tdb-progress-track {
+  height: 6px; background: #E8F4FD;
+  border-radius: 3px; overflow: hidden; margin-bottom: 4px;
+}
+.tdb-progress-fill {
+  height: 100%; border-radius: 3px;
+  transition: width .3s ease;
+}
+.tdb-progress-meta {
+  display: flex; justify-content: space-between;
+  font-size: 10px; color: #5B7FA6;
+  margin-bottom: 8px;
+}
+
+.tdb-alert-row {
+  background: #FDEDF0; border: 1px solid #F5C4C4;
+  border-radius: 8px; padding: 6px 10px;
+  font-size: 11px; color: #E2445C; font-weight: 500;
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 8px;
+}
+.tdb-tags {
+  display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px;
+}
+.tdb-tag {
+  padding: 3px 9px; border-radius: 8px;
+  font-size: 10px; font-weight: 600;
+}
+.tdb-enter-btn {
+  width: 100%; padding: 8px;
+  background: #E8F4FD; border: 1px solid #8EC8F0;
+  border-radius: 10px; color: #0A5E9A;
+  font-size: 12px; font-weight: 600;
+  cursor: pointer; font-family: 'Rubik', sans-serif;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: background .15s;
+}
+.tdb-enter-btn:hover { background: #C5E3F7; }
+
+/* ── Drawer ───────────────────────────────────────────────────────────────── */
+.tdb-overlay {
+  position: fixed; inset: 0;
+  background: rgba(2,31,54,.35);
+  z-index: 1000;
+  display: flex;
+  direction: rtl;
+}
+.tdb-drawer {
+  background: #fff;
+  width: min(560px, 100vw);
+  height: 100vh;
+  margin-right: auto;
+  overflow-y: auto;
+  font-family: 'Rubik', sans-serif;
+  animation: tdb-slide .25s ease;
+  display: flex; flex-direction: column;
+}
+@keyframes tdb-slide {
+  from { transform: translateX(-30px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+
+.tdb-drawer-header {
+  background: #074876; color: #fff;
+  padding: 20px 24px;
+  display: flex; align-items: center; gap: 14px;
+  flex-shrink: 0;
+}
+.tdb-drawer-avatar {
+  width: 46px; height: 46px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700; flex-shrink: 0; color: #fff;
+}
+.tdb-drawer-info { flex: 1; }
+.tdb-drawer-name { font-size: 16px; font-weight: 700; }
+.tdb-drawer-role { font-size: 12px; opacity: .85; margin-top: 2px; }
+.tdb-drawer-close {
+  background: rgba(255,255,255,.15); border: none; color: #fff;
+  width: 32px; height: 32px; border-radius: 50%;
+  cursor: pointer; font-size: 18px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.tdb-drawer-close:hover { background: rgba(255,255,255,.3); }
+
+.tdb-drawer-kpi {
+  display: grid; grid-template-columns: repeat(4,1fr);
+  gap: 8px; padding: 14px 24px;
+  background: #E8F4FD; flex-shrink: 0;
+}
+.tdb-drawer-kpi-item { text-align: center; }
+.tdb-drawer-kpi-val  { font-size: 20px; font-weight: 700; }
+.tdb-drawer-kpi-label{ font-size: 10px; color: #5B7FA6; margin-top: 2px; }
+
+.tdb-drawer-tabs {
+  display: flex; border-bottom: 1px solid #C5E3F7;
+  padding: 0 24px; background: #fff;
+  position: sticky; top: 0; z-index: 1; flex-shrink: 0;
+}
+.tdb-drawer-tab {
+  background: none; border: none;
+  padding: 12px 14px; cursor: pointer;
+  font-family: 'Rubik', sans-serif;
+  font-size: 12px; font-weight: 500; color: #5B7FA6;
+  border-bottom: 2.5px solid transparent;
+  display: flex; align-items: center; gap: 6px;
+  transition: all .15s;
+}
+.tdb-drawer-tab.active { color: #0A5E9A; border-bottom-color: #1A91D9; font-weight: 700; }
+.tdb-drawer-tab-badge {
+  background: #E8F4FD; color: #0A5E9A;
+  padding: 1px 7px; border-radius: 10px;
+  font-size: 10px; font-weight: 700;
+}
+.tdb-drawer-tab-badge.active { background: #1A91D9; color: #fff; }
+
+.tdb-drawer-list { flex: 1; padding: 4px 0; }
+.tdb-drawer-empty {
+  padding: 40px 24px; text-align: center;
+  color: #5B7FA6; font-size: 13px;
+}
+.tdb-drawer-hint {
+  padding: 8px 24px;
+  font-size: 11px; color: #5B7FA6;
+  background: #F0F7FF;
+  border-bottom: 1px solid #C5E3F7;
+  display: flex; align-items: center; gap: 6px;
+}
+.tdb-drawer-hint::before {
+  content: '✏️';
+  font-size: 12px;
+}
+.tdb-drawer-task {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 24px;
+  border-bottom: 1px solid #F0F7FF;
+  cursor: pointer; transition: background .12s;
+}
+.tdb-drawer-task:hover {
+  background: #E8F4FD;
+  border-right: 2.5px solid #1A91D9;
+  padding-right: 21.5px;
+}
+.tdb-drawer-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.tdb-drawer-task-body { flex: 1; min-width: 0; }
+.tdb-drawer-task-name { font-size: 12px; font-weight: 600; color: #042C53; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tdb-drawer-task-meta { font-size: 10px; color: #5B7FA6; margin-top: 2px; }
+
+.tdb-badge { padding: 3px 9px; border-radius: 8px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+
+/* ── States ───────────────────────────────────────────────────────────────── */
+.tdb-loading, .tdb-empty {
+  background: #fff; border: 1.5px solid #C5E3F7;
+  border-radius: 14px; padding: 40px;
+  text-align: center; color: #5B7FA6; font-size: 13px;
+}
+
+/* ── Drawer filter bar ────────────────────────────────────────────────────── */
+.tdb-drawer-filters {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 10px 16px;
+  background: #F8FBFF;
+  border-bottom: 1px solid #C5E3F7;
+  flex-shrink: 0;
+}
+.tdb-drawer-filter-sel {
+  min-width: 120px; font-size: 11px; padding: 5px 8px;
+}
+.tdb-drawer-filter-date {
+  width: 110px; font-size: 11px; padding: 5px 8px;
+}
+.tdb-ghost-xs {
+  background: none; border: 1px solid #C5E3F7;
+  color: #5B7FA6; border-radius: 6px;
+  padding: 4px 8px; font-size: 10px; font-weight: 600;
+  cursor: pointer; font-family: 'Rubik', sans-serif;
+  white-space: nowrap;
+}
+.tdb-ghost-xs:hover { background: #E8F4FD; }
+
+/* ── Settings panel ───────────────────────────────────────────────────────── */
+.tdb-settings-panel {
+  background: #fff;
+  width: min(620px, 100vw);
+  max-height: 100vh;
+  margin-right: auto;
+  overflow-y: auto;
+  font-family: 'Rubik', sans-serif;
+  padding: 0;
+  animation: tdb-slide .25s ease;
+  display: flex; flex-direction: column;
+}
+.tdb-settings-header {
+  background: #074876; color: #fff;
+  padding: 18px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 16px; font-weight: 700;
+  flex-shrink: 0;
+}
+.tdb-settings-section-title {
+  font-size: 13px; font-weight: 700; color: #042C53;
+  margin: 0 24px; padding: 14px 0 8px;
+  border-bottom: 1.5px solid #E8F4FD;
+}
+.tdb-settings-hint {
+  font-size: 11px; color: #5B7FA6;
+  padding: 6px 24px 0;
+}
+.tdb-settings-error {
+  margin: 8px 24px; padding: 8px 12px;
+  background: #FEE2E2; color: #991B1B;
+  border-radius: 8px; font-size: 12px;
+}
+.tdb-status-list { padding: 8px 24px; display: flex; flex-direction: column; gap: 6px; }
+.tdb-status-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
+  background: #F8FBFF;
+  border: 1.5px solid #E8F4FD;
+  border-radius: 10px;
+}
+.tdb-status-arrows { display: flex; flex-direction: column; gap: 2px; }
+.tdb-arrow-btn {
+  background: none; border: 1px solid #C5E3F7;
+  color: #5B7FA6; border-radius: 4px;
+  width: 20px; height: 18px; font-size: 9px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  line-height: 1;
+}
+.tdb-arrow-btn:hover:not(:disabled) { background: #E8F4FD; }
+.tdb-arrow-btn:disabled { opacity: .35; cursor: default; }
+.tdb-status-edit-row {
+  display: flex; align-items: center; gap: 6px; flex: 1; flex-wrap: wrap;
+}
+.tdb-settings-input {
+  padding: 6px 10px;
+  border: 1.5px solid #C5E3F7; border-radius: 7px;
+  font-size: 12px; font-family: 'Rubik', sans-serif;
+  color: #042C53; outline: none; flex: 1; min-width: 80px;
+}
+.tdb-settings-input:focus { border-color: #1A91D9; }
+.tdb-color-group { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.tdb-color-input {
+  width: 32px; height: 28px; padding: 0; border: 1.5px solid #C5E3F7;
+  border-radius: 5px; cursor: pointer; background: none;
+}
+.tdb-settings-save-btn {
+  background: #00C875; color: #fff; border: none;
+  border-radius: 7px; width: 28px; height: 28px;
+  cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+}
+.tdb-settings-cancel-btn {
+  background: #F1F5F9; color: #475569; border: none;
+  border-radius: 7px; width: 28px; height: 28px;
+  cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+}
+.tdb-settings-edit-btn {
+  background: none; border: 1px solid #C5E3F7;
+  border-radius: 7px; width: 28px; height: 28px;
+  cursor: pointer; font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+}
+.tdb-settings-edit-btn:hover { background: #E8F4FD; }
+.tdb-settings-del-btn {
+  background: none; border: 1px solid #FECACA;
+  border-radius: 7px; width: 28px; height: 28px;
+  cursor: pointer; font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+}
+.tdb-settings-del-btn:hover { background: #FEE2E2; }
+.tdb-status-add-form {
+  padding: 10px 24px 20px;
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end;
+}
+.tdb-settings-add-btn {
+  padding: 7px 16px; background: #1A91D9; color: #fff;
+  border: none; border-radius: 8px;
+  font-family: 'Rubik', sans-serif; font-size: 12px; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+}
+.tdb-settings-add-btn:hover:not(:disabled) { background: #0A5E9A; }
+.tdb-settings-add-btn:disabled { opacity: .5; cursor: default; }
