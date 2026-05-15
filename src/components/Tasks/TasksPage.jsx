@@ -426,6 +426,19 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
   const [contactPending, setContactPending] = useState([]);
   // Forms picker — used only when creating a new task (form.id is empty)
   const [allForms,        setAllForms]        = useState([]);
+
+  // Status→Form pairs — UI-friendly array of {uid, status, formId}
+  const [statusFormPairs, setStatusFormPairs] = useState(() => {
+    const sf = initialTask.status_forms;
+    let obj = {};
+    if (sf) {
+      if (typeof sf === 'string') { try { obj = JSON.parse(sf); } catch {} }
+      else if (typeof sf === 'object') obj = sf;
+    }
+    return Object.entries(obj)
+      .filter(([, v]) => v)
+      .map(([s, f], i) => ({ uid: i, status: s, formId: f }));
+  });
   const [selectedFormIds, setSelectedFormIds] = useState([]);
   const [formSearch,      setFormSearch]      = useState('');
 
@@ -461,6 +474,15 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
   useEffect(() => {
     api.get('/api/forms-list').then(r => setAllForms(r.data || [])).catch(() => {});
   }, []);
+
+  // Sync statusFormPairs array → form.statusForms object (for save payload)
+  useEffect(() => {
+    const obj = {};
+    for (const row of statusFormPairs) {
+      if (row.status && row.formId) obj[row.status] = row.formId;
+    }
+    setForm(p => ({ ...p, statusForms: obj }));
+  }, [statusFormPairs]); // eslint-disable-line
 
   const upd = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -652,39 +674,71 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
             <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: -8, marginBottom: 12 }}>
               כשעובד בשטח יבחר סטטוס מסוים — הטופס המשויך יופיע אוטומטית במסך המשימה.
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-              {statusList.filter(([v]) => v !== 'new').map(([statusKey, statusLabel]) => {
-                const def = statusDefs[statusKey] || {};
-                return (
-                  <div key={statusKey} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{
-                      minWidth: 80, padding: '4px 10px', borderRadius: 20,
-                      fontSize: 12, fontWeight: 700, textAlign: 'center',
-                      background: def.bg || '#E5E7EB',
-                      color: def.text || def.color || '#475569',
-                      flexShrink: 0,
-                    }}>{statusLabel}</span>
-                    <select
-                      value={form.statusForms[statusKey] || ''}
-                      onChange={e => {
-                        const val = e.target.value;
-                        setForm(p => {
-                          const next = { ...p.statusForms };
-                          if (val) next[statusKey] = val; else delete next[statusKey];
-                          return { ...p, statusForms: next };
-                        });
-                      }}
-                      style={{ flex: 1 }}
-                    >
-                      <option value="">— ללא טופס —</option>
-                      {allForms.map(f => (
-                        <option key={f.id} value={f.id}>{f.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                );
-              })}
+
+            {/* Rows */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
+              {statusFormPairs.map((row, idx) => (
+                <div key={row.uid} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  {/* Status picker */}
+                  <select
+                    value={row.status}
+                    onChange={e => setStatusFormPairs(p =>
+                      p.map((r, i) => i === idx ? { ...r, status: e.target.value } : r)
+                    )}
+                    style={{ flex: 1, minWidth: 0 }}
+                  >
+                    <option value="">— בחר סטטוס —</option>
+                    {statusList.filter(([v]) => v !== 'new').map(([v, l]) => {
+                      const def = statusDefs[v] || {};
+                      return <option key={v} value={v}>{l}</option>;
+                    })}
+                  </select>
+
+                  {/* Form picker */}
+                  <select
+                    value={row.formId}
+                    onChange={e => setStatusFormPairs(p =>
+                      p.map((r, i) => i === idx ? { ...r, formId: e.target.value } : r)
+                    )}
+                    style={{ flex: 1, minWidth: 0 }}
+                  >
+                    <option value="">— בחר טופס —</option>
+                    {allForms.map(f => (
+                      <option key={f.id} value={f.id}>{f.name}</option>
+                    ))}
+                  </select>
+
+                  {/* Remove row */}
+                  <button
+                    type="button"
+                    onClick={() => setStatusFormPairs(p => p.filter((_, i) => i !== idx))}
+                    title="הסר שיוך"
+                    style={{
+                      flexShrink: 0, width: 32, height: 32, borderRadius: 8,
+                      border: '1px solid var(--border, #e2e8f0)',
+                      background: '#FEE2E2', color: '#991B1B',
+                      fontSize: 16, fontWeight: 700, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >×</button>
+                </div>
+              ))}
             </div>
+
+            {/* Add row button */}
+            <button
+              type="button"
+              onClick={() => setStatusFormPairs(p => [...p, { uid: Date.now(), status: '', formId: '' }])}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '7px 14px', borderRadius: 8, marginBottom: 20,
+                border: '1.5px dashed var(--b200, #8EC8F0)',
+                background: 'var(--b50, #E8F4FD)', color: 'var(--b600, #0A5E9A)',
+                fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> הוסף שיוך טופס לסטטוס
+            </button>
           </>
         )}
 
