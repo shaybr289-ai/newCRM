@@ -1,0 +1,274 @@
+/* ── Attendance Module Styles ─────────────────────────────────────────────── */
+
+.attendance-page {
+  padding: 0 24px 24px;
+  direction: rtl;
+}
+
+.attendance-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 24px;
+}
+
+.att-tab {
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-2);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color .15s, border-color .15s;
+}
+.att-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.att-tab:hover:not(.active) { color: var(--text-1); }
+
+/* ── Dashboard ─────────────────────────────────────────────────────────────── */
+.att-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.att-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.att-kpi-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+}
+.att-kpi-card .kpi-value {
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text-1);
+}
+.att-kpi-card .kpi-label {
+  font-size: 13px;
+  color: var(--text-2);
+  margin-top: 4px;
+}
+.att-kpi-card.danger .kpi-value { color: #EF4444; }
+.att-kpi-card.warning .kpi-value { color: #F59E0B; }
+.att-kpi-card.success .kpi-value { color: #10B981; }
+
+.att-section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-1);
+  margin: 0 0 12px;
+}
+
+/* ── Table ─────────────────────────────────────────────────────────────────── */
+.att-table-wrap {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.att-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.att-table th {
+  background: var(--bg-subtle);
+  padding: 10px 12px;
+  text-align: right;
+  font-weight: 600;
+  color: var(--text-2);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.att-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text-1);
+  vertical-align: middle;
+}
+
+.att-table tr:last-child td { border-bottom: none; }
+.att-table tr:hover td { background: var(--bg-hover); }
+
+/* ── Filters bar ───────────────────────────────────────────────────────────── */
+.att-filters {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.att-filters select,
+.att-filters input {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-1);
+  font-size: 13px;
+  min-width: 120px;
+}
+
+/* ── Status badges ─────────────────────────────────────────────────────────── */
+.att-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.att-badge.clocked-in  { background: #D1FAE5; color: #065F46; }
+.att-badge.clocked-out { background: #F3F4F6; color: #6B7280; }
+.att-badge.on-break    { background: #FEF3C7; color: #92400E; }
+.att-badge.anomaly     { background: #FEE2E2; color: #991B1B; }
+.att-badge.manual      { background: #EDE9FE; color: #5B21B6; }
+.att-badge.ot-pending  { background: #FEF3C7; color: #92400E; }
+.att-badge.ot-approved { background: #D1FAE5; color: #065F46; }
+.att-badge.ot-rejected { background: #FEE2E2; color: #991B1B; }
+
+/* ── My Attendance calendar grid ───────────────────────────────────────────── */
+.att-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.att-day-cell {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  cursor: default;
+}
+.att-day-cell .day-num { font-weight: 700; font-size: 14px; }
+.att-day-cell .day-hrs { font-size: 10px; color: var(--text-2); }
+.att-day-cell.present { background: #D1FAE5; border-color: #6EE7B7; }
+.att-day-cell.absent  { background: #FEE2E2; border-color: #FCA5A5; }
+.att-day-cell.today   { border-color: var(--accent); border-width: 2px; }
+.att-day-cell.future  { background: var(--bg-subtle); opacity: 0.5; }
+.att-day-cell.weekend { background: var(--bg-subtle); }
+
+/* ── Summary bar ───────────────────────────────────────────────────────────── */
+.att-summary-bar {
+  display: flex;
+  gap: 24px;
+  padding: 16px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+.att-summary-item .label { font-size: 12px; color: var(--text-2); }
+.att-summary-item .value { font-size: 20px; font-weight: 700; color: var(--text-1); }
+
+/* ── Report table ──────────────────────────────────────────────────────────── */
+.att-report-total-row td {
+  background: var(--bg-subtle);
+  font-weight: 700;
+  border-top: 2px solid var(--border);
+}
+
+/* ── Modals ────────────────────────────────────────────────────────────────── */
+.att-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.att-modal {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 24px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  direction: rtl;
+}
+
+.att-modal h3 { margin: 0 0 20px; font-size: 18px; color: var(--text-1); }
+
+.att-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.att-form-row.full { grid-template-columns: 1fr; }
+
+.att-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  margin-bottom: 5px;
+}
+
+.att-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-page);
+  color: var(--text-1);
+  font-size: 13px;
+  box-sizing: border-box;
+}
+.att-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-light);
+}
+
+.att-modal-footer {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-start;
+  margin-top: 20px;
+}
+
+/* ── Geofence admin ────────────────────────────────────────────────────────── */
+.geofence-admin { display: grid; grid-template-columns: 360px 1fr; gap: 20px; height: calc(100vh - 200px); }
+.geofence-sidebar { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+.geofence-zone-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  cursor: pointer;
+}
+.geofence-zone-card:hover { border-color: var(--accent); }
+.geofence-zone-card.selected { border-color: var(--accent); background: var(--accent-light); }
+#geofence-map { border-radius: 12px; border: 1px solid var(--border); height: 100%; }
+
+/* ── Overtime panel ────────────────────────────────────────────────────────── */
+.overtime-row { cursor: pointer; }
+.overtime-row:hover td { background: var(--bg-hover); }

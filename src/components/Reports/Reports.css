@@ -1,0 +1,189 @@
+/* ── Report Builder Tabs ──────────────────────────────────────────────────── */
+.rpt-builder-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.rpt-builder-tab {
+  padding: 10px 18px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+.rpt-builder-tab:hover { color: var(--accent); }
+.rpt-builder-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+.rpt-builder-body {
+  min-height: 200px;
+}
+
+.rpt-hint {
+  color: var(--text-3);
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+.rpt-subtitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin-bottom: 8px;
+}
+
+/* ── Columns grid ────────────────────────────────────────────────────────── */
+.rpt-columns-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.rpt-field-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rpt-field-chip {
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  font-family: 'Poppins', sans-serif;
+  transition: all 0.2s;
+}
+.rpt-field-chip:hover {
+  background: var(--accent-light);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.rpt-selected-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rpt-selected-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.rpt-order-badge {
+  background: var(--accent-light);
+  color: var(--accent);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 24px;
+  text-align: center;
+}
+
+.rpt-move-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-3);
+  padding: 2px;
+  transition: color 0.15s;
+}
+.rpt-move-btn:hover { color: var(--accent); }
+.rpt-move-btn:disabled { opacity: 0.3; cursor: default; }
+
+.rpt-remove-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--danger);
+  font-size: 14px;
+  padding: 2px;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+.rpt-remove-btn:hover { opacity: 0.7; }
+
+/* ── Filter row ──────────────────────────────────────────────────────────── */
+.rpt-filter-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.rpt-filter-row select,
+.rpt-filter-row input {
+  font-size: 12px;
+  padding: 8px 10px;
+}
+
+/* ── Report Runner ───────────────────────────────────────────────────────── */
+.rpt-run-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.rpt-run-header h3 {
+  display: inline;
+  margin-left: 10px;
+}
+
+.rpt-group-header {
+  background: var(--accent-light) !important;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 8px 12px !important;
+}
+
+/* ── Join module chips ────────────────────────────────────────────────────── */
+.rpt-join-chip {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+  font-family: 'Poppins', sans-serif;
+  transition: all 0.2s;
+}
+.rpt-join-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.rpt-join-chip.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 700px) {
+  .rpt-columns-grid { grid-template-columns: 1fr; }
+  .rpt-filter-row { flex-wrap: wrap; }
+}

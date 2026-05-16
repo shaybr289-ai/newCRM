@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSettings, useSaveSetting, useCompanyInfo, useSaveCompanyInfo } from '../../hooks/useDataManagement';
+import { api } from '../../api/client';
 
 export default function SettingsTab() {
   const { data: settings } = useSettings();
@@ -11,9 +12,11 @@ export default function SettingsTab() {
   const [usdRate, setUsdRate] = useState('');
   const [eurRate, setEurRate] = useState('');
   const [gbpRate, setGbpRate] = useState('');
+  const [fxSyncTime, setFxSyncTime] = useState('18:00');
+  const [fxTimezone, setFxTimezone] = useState('Asia/Jerusalem');
   const [companyForm, setCompanyForm] = useState({});
   const [saved, setSaved] = useState('');
-  const [refreshingUsd, setRefreshingUsd] = useState(false);
+  const [refreshingFx, setRefreshingFx] = useState(false);
 
   // Email settings
   const [emailCfg, setEmailCfg] = useState({ senderEmail: '', senderName: '' });
@@ -23,9 +26,11 @@ export default function SettingsTab() {
   useEffect(() => {
     if (settings) {
       setVatRate(settings.vat_rate || '18');
-      setUsdRate(settings.usd_rate || '3.7');
-      setEurRate(settings.eur_rate || '4.0');
-      setGbpRate(settings.gbp_rate || '4.7');
+      setUsdRate(parseFloat(settings.usd_rate || '3.70').toFixed(3));
+      setEurRate(parseFloat(settings.eur_rate || '4.00').toFixed(3));
+      setGbpRate(parseFloat(settings.gbp_rate || '4.70').toFixed(3));
+      setFxSyncTime(settings.exchange_rate_sync_time || '18:00');
+      setFxTimezone(settings.exchange_rate_timezone || 'Asia/Jerusalem');
       // Load email config
       try { const ec = JSON.parse(settings.email_config || '{}'); setEmailCfg({ senderEmail: ec.senderEmail || '', senderName: ec.senderName || '' }); } catch {}
       // Load email templates
@@ -42,6 +47,8 @@ export default function SettingsTab() {
     await saveSetting.mutateAsync({ key: 'usd_rate', value: usdRate });
     await saveSetting.mutateAsync({ key: 'eur_rate', value: eurRate });
     await saveSetting.mutateAsync({ key: 'gbp_rate', value: gbpRate });
+    await saveSetting.mutateAsync({ key: 'exchange_rate_sync_time', value: fxSyncTime });
+    await saveSetting.mutateAsync({ key: 'exchange_rate_timezone', value: fxTimezone });
     setSaved('הגדרות נשמרו');
     setTimeout(() => setSaved(''), 3000);
   };
@@ -105,20 +112,20 @@ export default function SettingsTab() {
 
   const updC = (k, v) => setCompanyForm(p => ({ ...p, [k]: v }));
 
-  const handleRefreshUsdRate = async () => {
-    setRefreshingUsd(true);
+  const handleRefreshRates = async () => {
+    setRefreshingFx(true);
     try {
-      const res = await fetch('/api/settings/refresh-usd-rate', { method: 'POST', headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` } });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'שגיאה');
-      setUsdRate(String(data.rate));
-      setSaved(`שער דולר עודכן: ${data.rate} ₪`);
-      setTimeout(() => setSaved(''), 4000);
+      const data = await api.post('/api/settings/refresh-exchange-rates');
+      setUsdRate(parseFloat(data.usd).toFixed(3));
+      setEurRate(parseFloat(data.eur).toFixed(3));
+      setGbpRate(parseFloat(data.gbp).toFixed(3));
+      setSaved(`שערי חליפין עודכנו — $${parseFloat(data.usd).toFixed(3)} ‚ €${parseFloat(data.eur).toFixed(3)} ‚ £${parseFloat(data.gbp).toFixed(3)}`);
+      setTimeout(() => setSaved(''), 5000);
     } catch (err) {
-      setSaved('שגיאה בטעינת שער מבנק ישראל');
+      setSaved('⚠️ שגיאה בטעינת שערי חליפין');
       setTimeout(() => setSaved(''), 4000);
     } finally {
-      setRefreshingUsd(false);
+      setRefreshingFx(false);
     }
   };
 
@@ -142,21 +149,67 @@ export default function SettingsTab() {
             <label>שער דולר (1$ = ₪)</label>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <input type="number" value={usdRate} onChange={e => setUsdRate(e.target.value)} dir="ltr" min="0" step="0.01" style={{ flex: 1 }} />
-              <button type="button" onClick={handleRefreshUsdRate} disabled={refreshingUsd}
-                title="רענן שער מבנק ישראל"
-                style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg-elevated)', cursor: 'pointer', fontSize: 16, whiteSpace: 'nowrap' }}>
-                {refreshingUsd ? '⏳' : '🔄'}
+              <button type="button" onClick={handleRefreshRates} disabled={refreshingFx}
+                title="רענן שערי חליפין" style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg-elevated)', cursor: 'pointer', fontSize: 16 }}>
+                {refreshingFx ? '⏳' : '🔄'}
               </button>
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>מתעדכן אוטומטית בכל יום ב-18:00</div>
           </div>
           <div className="form-field">
             <label>שער יורו (1€ = ₪)</label>
-            <input type="number" value={eurRate} onChange={e => setEurRate(e.target.value)} dir="ltr" min="0" step="0.01" />
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input type="number" value={eurRate} onChange={e => setEurRate(e.target.value)} dir="ltr" min="0" step="0.01" style={{ flex: 1 }} />
+              <button type="button" onClick={handleRefreshRates} disabled={refreshingFx}
+                title="רענן שערי חליפין" style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg-elevated)', cursor: 'pointer', fontSize: 16 }}>
+                {refreshingFx ? '⏳' : '🔄'}
+              </button>
+            </div>
           </div>
           <div className="form-field">
             <label>שער ליש"ט (1£ = ₪)</label>
-            <input type="number" value={gbpRate} onChange={e => setGbpRate(e.target.value)} dir="ltr" min="0" step="0.01" />
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input type="number" value={gbpRate} onChange={e => setGbpRate(e.target.value)} dir="ltr" min="0" step="0.01" style={{ flex: 1 }} />
+              <button type="button" onClick={handleRefreshRates} disabled={refreshingFx}
+                title="רענן שערי חליפין" style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg-elevated)', cursor: 'pointer', fontSize: 16 }}>
+                {refreshingFx ? '⏳' : '🔄'}
+              </button>
+            </div>
+          </div>
+          <div className="form-field">
+            <label>שעת עדכון אוטומטי</label>
+            <input type="time" value={fxSyncTime} onChange={e => setFxSyncTime(e.target.value)} dir="ltr" />
+          </div>
+          <div className="form-field">
+            <label>אזור זמן</label>
+            <select value={fxTimezone} onChange={e => setFxTimezone(e.target.value)} dir="ltr">
+              <optgroup label="ישראל ואזור">
+                <option value="Asia/Jerusalem">ישראל (Asia/Jerusalem)</option>
+                <option value="Asia/Beirut">לבנון / קפריסין (Asia/Beirut)</option>
+                <option value="Asia/Amman">ירדן (Asia/Amman)</option>
+                <option value="Asia/Dubai">איחוד האמירויות (Asia/Dubai)</option>
+                <option value="Asia/Riyadh">ערב הסעודית (Asia/Riyadh)</option>
+                <option value="Africa/Cairo">מצרים (Africa/Cairo)</option>
+              </optgroup>
+              <optgroup label="אירופה">
+                <option value="Europe/London">בריטניה (Europe/London)</option>
+                <option value="Europe/Paris">צרפת / גרמניה (Europe/Paris)</option>
+                <option value="Europe/Rome">איטליה (Europe/Rome)</option>
+                <option value="Europe/Moscow">רוסיה — מוסקבה (Europe/Moscow)</option>
+              </optgroup>
+              <optgroup label="אמריקה">
+                <option value="America/New_York">ארה"ב — מזרח (America/New_York)</option>
+                <option value="America/Chicago">ארה"ב — מרכז (America/Chicago)</option>
+                <option value="America/Denver">ארה"ב — הרים (America/Denver)</option>
+                <option value="America/Los_Angeles">ארה"ב — מערב (America/Los_Angeles)</option>
+                <option value="America/Sao_Paulo">ברזיל (America/Sao_Paulo)</option>
+              </optgroup>
+              <optgroup label="אסיה-פסיפיק">
+                <option value="Asia/Kolkata">הודו (Asia/Kolkata)</option>
+                <option value="Asia/Shanghai">סין (Asia/Shanghai)</option>
+                <option value="Asia/Tokyo">יפן (Asia/Tokyo)</option>
+                <option value="Australia/Sydney">אוסטרליה — סידני (Australia/Sydney)</option>
+              </optgroup>
+            </select>
           </div>
         </div>
         <button className="btn btn-primary" onClick={handleSaveSettings} style={{ marginTop: 12 }}

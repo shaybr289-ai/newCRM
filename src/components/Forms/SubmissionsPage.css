@@ -1,0 +1,112 @@
+.submissions-page { padding: 16px 0; }
+
+.submissions-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.submissions-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-right: auto;
+}
+
+.submissions-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.submissions-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-3);
+  font-size: 14px;
+}
+.submissions-empty.error { color: var(--danger); }
+
+.submissions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.submission-row {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.submission-row.is-expanded { border-color: var(--accent); }
+
+.submission-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  user-select: none;
+}
+.submission-summary:hover { background: var(--bg-hover, rgba(0,0,0,0.03)); }
+
+.sub-status-badge {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.sub-num { font-family: monospace; font-size: 13px; color: var(--text-2); }
+.sub-date { font-size: 13px; color: var(--text-2); }
+.sub-ip  { font-size: 12px; color: var(--text-3); margin-right: auto; }
+.sub-expand-icon { color: var(--text-3); font-size: 12px; }
+
+.submission-detail {
+  border-top: 1px solid var(--border);
+  padding: 16px;
+  background: var(--bg-page, #f9fafb);
+}
+
+.submission-values {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.sub-value-row {
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
+  align-items: flex-start;
+}
+.sub-value-label {
+  min-width: 140px;
+  font-weight: 600;
+  color: var(--text-2);
+  flex-shrink: 0;
+}
+.sub-value-val {
+  color: var(--text-1);
+  word-break: break-word;
+  flex: 1;
+}
+
+.submission-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.sub-action-label {
+  font-size: 13px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.muted-hint { color: var(--text-3); font-size: 13px; }

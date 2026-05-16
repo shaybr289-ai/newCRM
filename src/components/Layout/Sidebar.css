@@ -1,0 +1,313 @@
+/* ── FieldOps Design System — Sidebar ──────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap');
+
+/* ── Tokens ──────────────────────────────────────────────────────────────────  */
+:root {
+  --fo-b700:  #074876;   /* Navy  — sidebar bg          */
+  --fo-b600:  #0A5E9A;   /* Sapphire — hover bg         */
+  --fo-b400:  #1A91D9;   /* Azure — active, toggle      */
+  --fo-b200:  #8EC8F0;   /* Sky                         */
+  --fo-b100:  #C5E3F7;   /* Mist                        */
+  --fo-b50:   #E8F4FD;   /* Frost                       */
+  --fo-t400:  #0097A7;   /* Teal — avatar               */
+  --fo-t300:  #00BCD4;   /* Cyan                        */
+  --fo-success: #00C875;
+  --fo-danger:  #E2445C;
+  --fo-text-dark:  #042C53;
+  --fo-text-muted: #5B7FA6;
+
+  --fo-sb-w:        220px;   /* expanded width  */
+  --fo-sb-w-mini:    64px;   /* collapsed width */
+}
+
+/* ── Sidebar shell ───────────────────────────────────────────────────────────  */
+.fo-sb {
+  font-family: 'Rubik', sans-serif;
+  direction: rtl;
+  width: var(--fo-sb-w);
+  height: 100vh;
+  position: fixed;
+  right: 0;
+  top: 0;
+  background: var(--fo-b700);
+  display: flex;
+  flex-direction: column;
+  z-index: 200;
+  overflow: hidden;
+  transition: width 0.22s cubic-bezier(.4,0,.2,1);
+  box-shadow: -2px 0 16px rgba(2,31,54,.35);
+}
+
+.fo-sb--collapsed {
+  width: var(--fo-sb-w-mini);
+}
+
+/* ── Logo ────────────────────────────────────────────────────────────────────  */
+.fo-sb__logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.09);
+  flex-shrink: 0;
+}
+
+.fo-sb__logo-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--fo-b400) 0%, var(--fo-t400) 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 17px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(26,145,217,.4);
+}
+
+.fo-sb__logo-text {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.fo-sb__toggle {
+  margin-right: auto;
+  background: rgba(255,255,255,.10);
+  border: none;
+  color: rgba(255,255,255,.75);
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background .15s, color .15s;
+}
+.fo-sb__toggle:hover {
+  background: var(--fo-b400);
+  color: #fff;
+}
+
+/* collapsed: center the toggle */
+.fo-sb--collapsed .fo-sb__logo {
+  justify-content: center;
+  padding: 18px 0 16px;
+}
+.fo-sb--collapsed .fo-sb__toggle {
+  margin-right: 0;
+}
+
+/* ── Nav ─────────────────────────────────────────────────────────────────────  */
+.fo-sb__nav {
+  flex: 1;
+  padding: 8px 8px 4px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.12) transparent;
+}
+.fo-sb__nav::-webkit-scrollbar { width: 4px; }
+.fo-sb__nav::-webkit-scrollbar-track { background: transparent; }
+.fo-sb__nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 4px; }
+
+/* ── Group ───────────────────────────────────────────────────────────────────  */
+.fo-sb__group {
+  margin-top: 4px;
+}
+
+.fo-sb__group-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: rgba(255,255,255,.35);
+  white-space: nowrap;
+}
+.fo-sb__group-icon {
+  display: inline-flex;
+  align-items: center;
+  opacity: .6;
+}
+
+.fo-sb__group-divider {
+  height: 1px;
+  background: rgba(255,255,255,.08);
+  margin: 6px 10px;
+}
+
+/* ── Nav item ────────────────────────────────────────────────────────────────  */
+.fo-sb__item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  color: rgba(255,255,255,.62);
+  text-decoration: none;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: right;
+  transition: background .14s ease, color .14s ease;
+  font-family: 'Rubik', sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 1px;
+}
+
+.fo-sb__item:hover {
+  background: rgba(255,255,255,.09);
+  color: rgba(255,255,255,.92);
+}
+
+.fo-sb__item--active {
+  background: var(--fo-b400) !important;
+  color: #fff !important;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(26,145,217,.30);
+}
+
+/* ── Item parts ──────────────────────────────────────────────────────────────  */
+.fo-sb__item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+}
+
+.fo-sb__item-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* color dot — small accent per module */
+.fo-sb__item-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.fo-sb__item:hover .fo-sb__item-dot,
+.fo-sb__item--active .fo-sb__item-dot {
+  opacity: .7;
+}
+
+/* collapsed: center icons */
+.fo-sb--collapsed .fo-sb__item {
+  justify-content: center;
+  padding: 9px 0;
+}
+.fo-sb--collapsed .fo-sb__item-icon {
+  width: auto;
+}
+
+/* ── Footer ──────────────────────────────────────────────────────────────────  */
+.fo-sb__footer {
+  padding: 8px 8px 10px;
+  border-top: 1px solid rgba(255,255,255,.09);
+  flex-shrink: 0;
+}
+
+.fo-sb__user {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  margin-bottom: 2px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.05);
+}
+.fo-sb__user--collapsed {
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.fo-sb__user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--fo-t400) 0%, var(--fo-t300) 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(0,151,167,.4);
+}
+
+.fo-sb__user-info { min-width: 0; }
+
+.fo-sb__user-name {
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fo-sb__user-role {
+  color: rgba(255,255,255,.38);
+  font-size: 10px;
+  margin-top: 1px;
+}
+
+/* logout button — inherits .fo-sb__item */
+.fo-sb__logout {
+  color: rgba(255,255,255,.45) !important;
+}
+.fo-sb__logout:hover {
+  background: rgba(226,68,92,.15) !important;
+  color: #F87A8E !important;
+}
+
+/* ── Responsive (mobile) ─────────────────────────────────────────────────────  */
+@media (max-width: 768px) {
+  .fo-sb {
+    width: var(--fo-sb-w-mini);
+  }
+  .fo-sb__logo-text,
+  .fo-sb__item-label,
+  .fo-sb__item-dot,
+  .fo-sb__group-label,
+  .fo-sb__user-info {
+    display: none;
+  }
+  .fo-sb__logo {
+    justify-content: center;
+    padding: 16px 0;
+  }
+  .fo-sb__item {
+    justify-content: center;
+    padding: 9px 0;
+  }
+  .fo-sb__user {
+    justify-content: center;
+    padding: 8px 0;
+  }
+  .fo-sb__toggle { display: none; }
+}

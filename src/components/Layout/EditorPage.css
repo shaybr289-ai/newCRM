@@ -1,0 +1,11 @@
+/* ── Shared Editor Page Layout (full-page edit instead of modal) ──────────── */
+.editor-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 16px;
+}
+.editor-topbar-title { flex: 1; }
+.editor-topbar-title h1 { font-size: 18px; font-weight: 700; }
+.editor-topbar-sub { font-size: 13px; color: var(--text-2); margin-right: 8px; }

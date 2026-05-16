@@ -195,7 +195,7 @@ function EmployeeDrawer({ employee, tasks, onClose, custName, statusDefs }) {
                 <span className="tdb-badge" style={{ background: statusBg, color: statusText }}>
                   {statusLabel}
                 </span>
-                <span style={{ fontSize: 14, opacity: .45, marginRight: 4 }}>✏️</span>
+                <span style={{ fontSize: 14, opacity: .45, marginRight: 4 }}><i className="ti ti-edit" aria-hidden="true" /></span>
               </div>
             );
           })}
@@ -205,14 +205,201 @@ function EmployeeDrawer({ employee, tasks, onClose, custName, statusDefs }) {
   );
 }
 
+// ── ToggleSwitch — FieldOps Design System ─────────────────────────────────────
+function ToggleSwitch({ checked, onChange, disabled = false, label = '' }) {
+  return (
+    <label className="fo-toggle-wrap">
+      <input
+        type="checkbox"
+        role="switch"
+        aria-checked={checked}
+        checked={checked}
+        onChange={onChange}
+        disabled={disabled}
+      />
+      <span className="fo-toggle-pill" />
+      {label && <span className="fo-toggle-label">{label}</span>}
+    </label>
+  );
+}
+
+// ── TaskPermissionsPanel ──────────────────────────────────────────────────────
+function TaskPermissionsPanel({ statusDefs }) {
+  const statusKeys = statusDefs.map(s => s.key);
+  const [users, setUsers]       = useState([]);
+  const [draft, setDraft]       = useState({}); // userId → permissions draft
+  const [dirty, setDirty]       = useState(new Set()); // userIds with unsaved changes
+  const [loading, setLoading]   = useState(true);
+  const [saving, setSaving]     = useState(false);
+  const [saved, setSaved]       = useState(false);
+  const [error, setError]       = useState(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const r = await api.get('/api/task-user-permissions');
+      const loaded = r.data || [];
+      setUsers(loaded);
+      // Initialize draft from loaded data
+      const d = {};
+      loaded.forEach(u => { d[u.id] = { ...(u.task_permissions || { reschedule: true, reassign: true, visible_statuses: null }) }; });
+      setDraft(d);
+      setDirty(new Set());
+    } catch (e) { setError(e.message); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const updateDraft = (userId, newPerms) => {
+    setDraft(prev => ({ ...prev, [userId]: newPerms }));
+    setDirty(prev => { const s = new Set(prev); s.add(userId); return s; });
+    setSaved(false);
+  };
+
+  const toggle = (userId, field) => {
+    const p = draft[userId] || { reschedule: true, reassign: true, visible_statuses: null };
+    updateDraft(userId, { ...p, [field]: !p[field] });
+  };
+
+  const setVisibility = (userId, key, checked) => {
+    const p = draft[userId] || { reschedule: true, reassign: true, visible_statuses: null };
+    let vs = p.visible_statuses ? [...p.visible_statuses] : [...statusKeys];
+    if (checked) { if (!vs.includes(key)) vs = [...vs, key]; }
+    else { vs = vs.filter(k => k !== key); }
+    if (vs.length === statusKeys.length) vs = null;
+    updateDraft(userId, { ...p, visible_statuses: vs });
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      await Promise.all([...dirty].map(uid =>
+        api.put(`/api/task-user-permissions/${uid}`, draft[uid])
+      ));
+      setDirty(new Set());
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (e) { setError(e.message); }
+    finally { setSaving(false); }
+  };
+
+  if (loading) return <div style={{ padding: 20, color: FO.TEXT_MUTED, textAlign: 'center' }}>טוען...</div>;
+
+  return (
+    <div style={{ padding: '0 0 16px' }}>
+      {/* Save bar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 24px', background: dirty.size > 0 ? '#FFF8E1' : FO.BG, borderBottom: `1px solid ${FO.B100}`, gap: 12 }}>
+        <p style={{ margin: 0, fontSize: 12, color: FO.TEXT_MUTED }}>
+          הגדרת הרשאות פעולה ותצוגת סטטוסים לכל עובד.
+          {dirty.size > 0 && <span style={{ color: FO.WARNING, fontWeight: 600, marginRight: 8 }}>● {dirty.size} שינויים לא שמורים</span>}
+          {saved && <span style={{ color: FO.SUCCESS, fontWeight: 600, marginRight: 8 }}><i className="ti ti-check" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> נשמר בהצלחה</span>}
+        </p>
+        <button
+          onClick={handleSave}
+          disabled={saving || dirty.size === 0}
+          style={{
+            padding: '7px 20px', borderRadius: 8, border: 'none', cursor: dirty.size > 0 ? 'pointer' : 'default',
+            background: dirty.size > 0 ? FO.B600 : '#ccc', color: '#fff',
+            fontFamily: 'Rubik, sans-serif', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap',
+            opacity: saving ? 0.7 : 1,
+          }}
+        >
+          {saving ? 'שומר...' : <><i className="ti ti-device-floppy" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> שמור הגדרות</>}
+        </button>
+      </div>
+
+      {error && <div className="tdb-settings-error" style={{ margin: '8px 24px' }}>{error}</div>}
+
+      <div style={{ overflowX: 'auto', padding: '0 0 8px' }}>
+        <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: FO.BG, borderBottom: `2px solid ${FO.B100}` }}>
+              <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: FO.TEXT_DARK }}>עובד</th>
+              <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, color: FO.TEXT_DARK, whiteSpace: 'nowrap' }}>הזזת תאריך</th>
+              <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, color: FO.TEXT_DARK, whiteSpace: 'nowrap' }}>שינוי מבצע</th>
+              <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: FO.TEXT_DARK }}>סטטוסים גלויים</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map(u => {
+              const p = draft[u.id] || { reschedule: true, reassign: true, visible_statuses: null };
+              const vs = p.visible_statuses; // null = all visible
+              const isDirty = dirty.has(u.id);
+              return (
+                <tr key={u.id} style={{ borderBottom: `1px solid ${FO.B50}`, background: isDirty ? '#FFFBF0' : 'transparent' }}>
+                  <td style={{ padding: '8px 12px', fontWeight: 600, color: FO.TEXT_DARK }}>
+                    {`${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username}
+                    {u.department && <span style={{ fontSize: 10, color: FO.TEXT_MUTED, marginRight: 6 }}>{u.department}</span>}
+                    {isDirty && <span style={{ fontSize: 10, color: FO.WARNING, marginRight: 4 }}>●</span>}
+                  </td>
+                  <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                    <ToggleSwitch
+                      checked={p.reschedule !== false}
+                      onChange={() => toggle(u.id, 'reschedule')}
+                      disabled={saving}
+                    />
+                  </td>
+                  <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                    <ToggleSwitch
+                      checked={p.reassign !== false}
+                      onChange={() => toggle(u.id, 'reassign')}
+                      disabled={saving}
+                    />
+                  </td>
+                  <td style={{ padding: '8px 12px' }}>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {statusDefs.map(({ key, label }) => {
+                        const isVisible = vs === null || vs.includes(key);
+                        return (
+                          <ToggleSwitch
+                            key={key}
+                            checked={isVisible}
+                            onChange={e => setVisibility(u.id, key, e.target.checked)}
+                            disabled={saving}
+                            label={label}
+                          />
+                        );
+                      })}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ── TaskStatusSettings Modal ──────────────────────────────────────────────────
-function TaskStatusSettings({ onClose, onSaved }) {
+export function TaskStatusSettings({ onClose, onSaved }) {
+  const [tab, setTab]             = useState('statuses'); // 'statuses' | 'permissions' | 'display'
   const [statuses, setStatuses]   = useState([]);
+  // Display settings (localStorage)
+  const [displayLimit, setDisplayLimitState] = useState(() =>
+    parseInt(localStorage.getItem('tasks_display_limit') || '25', 10)
+  );
+  const [displayLimitInput, setDisplayLimitInput] = useState(() =>
+    localStorage.getItem('tasks_display_limit') || '25'
+  );
+  const [displaySaved, setDisplaySaved] = useState(false);
+
+  const saveDisplayLimit = () => {
+    const n = parseInt(displayLimitInput, 10);
+    if (!n || n < 1) return;
+    localStorage.setItem('tasks_display_limit', String(n));
+    setDisplayLimitState(n);
+    setDisplaySaved(true);
+    setTimeout(() => setDisplaySaved(false), 2000);
+  };
   const [loading, setLoading]     = useState(true);
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState(null);
   // New status form
-  const [newKey, setNewKey]       = useState('');
   const [newLabel, setNewLabel]   = useState('');
   const [newColor, setNewColor]   = useState('#3B82F6');
   const [newBg, setNewBg]         = useState('#EFF6FF');
@@ -236,14 +423,14 @@ function TaskStatusSettings({ onClose, onSaved }) {
   useEffect(() => { load(); }, [load]);
 
   const handleAdd = async () => {
-    if (!newKey.trim() || !newLabel.trim()) { setError('מפתח ושם סטטוס הם שדות חובה'); return; }
+    if (!newLabel.trim()) { setError('שם סטטוס הוא שדה חובה'); return; }
     setSaving(true); setError(null);
     try {
       await api.post('/api/task-status-settings', {
-        key: newKey.trim(), label: newLabel.trim(),
+        label: newLabel.trim(),
         color: newColor, bg_color: newBg, text_color: newText,
       });
-      setNewKey(''); setNewLabel(''); setNewColor('#3B82F6'); setNewBg('#EFF6FF'); setNewText('#1E40AF');
+      setNewLabel(''); setNewColor('#3B82F6'); setNewBg('#EFF6FF'); setNewText('#1E40AF');
       await load(); onSaved?.();
     } catch (e) { setError(e.message); }
     finally { setSaving(false); }
@@ -297,10 +484,82 @@ function TaskStatusSettings({ onClose, onSaved }) {
     <div className="tdb-overlay" onClick={onClose}>
       <div className="tdb-settings-panel" onClick={e => e.stopPropagation()}>
         <div className="tdb-settings-header">
-          <span>⚙️ הגדרות מודול משימות</span>
+          <span><i className="ti ti-settings" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> הגדרות מודול משימות</span>
           <button className="tdb-drawer-close" onClick={onClose}>×</button>
         </div>
 
+        {/* Tabs */}
+        <div style={{ display: 'flex', borderBottom: `1.5px solid ${FO.B100}`, background: FO.BG }}>
+          {[
+            ['statuses',    <><i className="ti ti-clipboard-list" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> סטטוסים</>],
+            ['permissions', <><i className="ti ti-lock"           aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> הרשאות</>],
+            ['display',     <><i className="ti ti-layout-list"    aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> תצוגה</>],
+          ].map(([v, l]) => (
+            <button key={v} onClick={() => setTab(v)} style={{
+              background: 'none', border: 'none', padding: '10px 20px',
+              fontFamily: 'Rubik, sans-serif', fontSize: 13, fontWeight: tab === v ? 700 : 500,
+              color: tab === v ? FO.B600 : FO.TEXT_MUTED,
+              borderBottom: tab === v ? `2.5px solid ${FO.B400}` : '2.5px solid transparent',
+              cursor: 'pointer', marginBottom: -1.5,
+            }}>{l}</button>
+          ))}
+        </div>
+
+        {tab === 'permissions' && <TaskPermissionsPanel statusDefs={statuses.map(s => ({ key: s.key, label: s.label }))} />}
+
+        {tab === 'display' && (
+          <div style={{ padding: 24 }}>
+            <h3 className="tdb-settings-section-title">הגדרות תצוגת רשימת משימות</h3>
+            <p className="tdb-settings-hint">הגדרות אלו משפיעות על מסך רשימת המשימות. הערכים נשמרים לדפדפן.</p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 360 }}>
+              {/* Display limit */}
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, color: FO.TEXT_DARK, display: 'block', marginBottom: 6 }}>
+                  כמות משימות לתצוגה
+                </label>
+                <p style={{ fontSize: 12, color: FO.TEXT_MUTED, margin: '0 0 10px' }}>
+                  מספר המשימות האחרונות שיוצגו בטעינת מסך המשימות (לפי מספר משימה יורד).
+                </p>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input
+                    type="number"
+                    min="1"
+                    max="1000"
+                    value={displayLimitInput}
+                    onChange={e => setDisplayLimitInput(e.target.value)}
+                    style={{
+                      width: 100, padding: '7px 12px', borderRadius: 8,
+                      border: `1.5px solid ${FO.B200}`, fontSize: 14, fontWeight: 600,
+                      textAlign: 'center', outline: 'none',
+                    }}
+                  />
+                  <span style={{ fontSize: 13, color: FO.TEXT_MUTED }}>משימות</span>
+                  <button
+                    onClick={saveDisplayLimit}
+                    style={{
+                      padding: '7px 18px', borderRadius: 8,
+                      background: FO.B600, color: '#fff',
+                      border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >
+                    שמור
+                  </button>
+                  {displaySaved && (
+                    <span style={{ fontSize: 12, color: FO.SUCCESS, fontWeight: 600 }}>
+                      <i className="ti ti-check" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} />
+                      נשמר!
+                    </span>
+                  )}
+                </div>
+                <p style={{ fontSize: 11, color: FO.TEXT_MUTED, marginTop: 8 }}>
+                  ערך נוכחי: {displayLimit} משימות. להצגת כל המשימות — הגדר ערך גבוה (למשל 9999).
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        {tab === 'statuses' && <>
         <h3 className="tdb-settings-section-title">סטטוסי משימות</h3>
         <p className="tdb-settings-hint">ניהול סטטוסים קיימים וסדר הצגתם. סטטוסים מובנים ניתנים לעריכה אך לא למחיקה.</p>
 
@@ -332,8 +591,8 @@ function TaskStatusSettings({ onClose, onSaved }) {
                       <label style={{ fontSize: 10, color: FO.TEXT_MUTED }}>טקסט</label>
                       <input type="color" value={editText} onChange={e => setEditText(e.target.value)} className="tdb-color-input" />
                     </div>
-                    <button className="tdb-settings-save-btn" onClick={handleSaveEdit} disabled={saving}>✓</button>
-                    <button className="tdb-settings-cancel-btn" onClick={() => setEditId(null)}>✕</button>
+                    <button className="tdb-settings-save-btn" onClick={handleSaveEdit} disabled={saving} aria-label="שמור"><i className="ti ti-check" aria-hidden="true" /></button>
+                    <button className="tdb-settings-cancel-btn" onClick={() => setEditId(null)} aria-label="ביטול"><i className="ti ti-x" aria-hidden="true" /></button>
                   </div>
                 ) : (
                   <>
@@ -341,9 +600,9 @@ function TaskStatusSettings({ onClose, onSaved }) {
                       {s.label}
                     </span>
                     <span style={{ fontSize: 11, color: FO.TEXT_MUTED, flex: 1 }}>{s.key}{s.is_built_in ? ' (מובנה)' : ''}</span>
-                    <button className="tdb-settings-edit-btn" onClick={() => startEdit(s)}>✏️</button>
+                    <button className="tdb-settings-edit-btn" onClick={() => startEdit(s)} aria-label="ערוך סטטוס"><i className="ti ti-edit" aria-hidden="true" /></button>
                     {!s.is_built_in && (
-                      <button className="tdb-settings-del-btn" onClick={() => handleDelete(s.id)} disabled={saving}>🗑</button>
+                      <button className="tdb-settings-del-btn" onClick={() => handleDelete(s.id)} disabled={saving} aria-label="מחק סטטוס"><i className="ti ti-trash" aria-hidden="true" /></button>
                     )}
                   </>
                 )}
@@ -355,9 +614,7 @@ function TaskStatusSettings({ onClose, onSaved }) {
         {/* Add new status */}
         <h3 className="tdb-settings-section-title" style={{ marginTop: 20 }}>הוספת סטטוס חדש</h3>
         <div className="tdb-status-add-form">
-          <input className="tdb-settings-input" value={newKey} onChange={e => setNewKey(e.target.value.replace(/\s/g, '_'))}
-            placeholder="מפתח (key, ללא רווחים)" />
-          <input className="tdb-settings-input" value={newLabel} onChange={e => setNewLabel(e.target.value)} placeholder="שם לתצוגה" />
+          <input className="tdb-settings-input" value={newLabel} onChange={e => setNewLabel(e.target.value)} placeholder="שם הסטטוס לתצוגה" />
           <div className="tdb-color-group">
             <label style={{ fontSize: 10, color: FO.TEXT_MUTED }}>צבע גבול</label>
             <input type="color" value={newColor} onChange={e => setNewColor(e.target.value)} className="tdb-color-input" />
@@ -370,18 +627,19 @@ function TaskStatusSettings({ onClose, onSaved }) {
             <label style={{ fontSize: 10, color: FO.TEXT_MUTED }}>טקסט</label>
             <input type="color" value={newText} onChange={e => setNewText(e.target.value)} className="tdb-color-input" />
           </div>
-          <button className="tdb-settings-add-btn" onClick={handleAdd} disabled={saving || !newKey.trim() || !newLabel.trim()}>
+          <button className="tdb-settings-add-btn" onClick={handleAdd} disabled={saving || !newLabel.trim()}>
             + הוסף
           </button>
         </div>
-        {newLabel && newColor && (
-          <div style={{ marginTop: 8 }}>
+        {newLabel && (
+          <div style={{ marginTop: 8, padding: '0 24px 16px' }}>
             <span style={{ fontSize: 11, color: FO.TEXT_MUTED }}>תצוגה מקדימה: </span>
             <span className="tdb-badge" style={{ background: newBg, color: newText, border: `1.5px solid ${newColor}` }}>
               {newLabel}
             </span>
           </div>
         )}
+        </>}
       </div>
     </div>
   );
@@ -450,7 +708,7 @@ function EmployeeCard({ employee, tasks, onClick }) {
       {/* Alert row */}
       {hasLate && (
         <div className="tdb-alert-row">
-          <span>⚠</span>
+          <span><i className="ti ti-alert-triangle" aria-hidden="true" /></span>
           <span>{stats.late} משימות עברו את תאריך היעד</span>
         </div>
       )}
@@ -472,7 +730,7 @@ function EmployeeCard({ employee, tasks, onClick }) {
         className="tdb-enter-btn"
         onClick={e => { e.stopPropagation(); onClick(employee); }}
       >
-        כניסה למשימה ←
+        הצגת משימות ←
       </button>
     </div>
   );
@@ -606,35 +864,41 @@ export default function TasksDashboard() {
       {/* Top Bar */}
       <div className="tdb-topbar">
         <div className="tdb-topbar-left">
-          <span className="tdb-topbar-icon">☑</span>
+          <span className="tdb-topbar-icon"><i className="ti ti-checkbox" aria-hidden="true" /></span>
           <h1 className="tdb-topbar-title">דשבורד משימות — סקירת עובדים</h1>
         </div>
         <div className="tdb-topbar-right">
           <button
             className="tdb-calendar-btn"
+            onClick={() => navigate('/tasks')}
+          >
+            <i className="ti ti-clipboard-list" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> משימות
+          </button>
+          <button
+            className="tdb-calendar-btn"
             onClick={() => navigate('/tasks?templates=1')}
           >
-            📋 תבניות פעילויות במשימה
+            <i className="ti ti-clipboard-list" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> תבניות פעילויות
           </button>
           <button
             className="tdb-calendar-btn"
             onClick={() => navigate('/tasks?new=1')}
             style={{ background: FO.B600, color: '#fff', borderColor: FO.B600 }}
           >
-            ➕ משימה חדשה
+            <i className="ti ti-plus" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> משימה חדשה
           </button>
           <button
             className="tdb-calendar-btn"
             onClick={() => navigate('/tasks/calendar')}
           >
-            📅 יומן עובדים
+            <i className="ti ti-calendar" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> יומן עובדים
           </button>
           <button
             className="tdb-calendar-btn"
             onClick={() => setShowSettings(true)}
             title="הגדרות מודול משימות"
           >
-            ⚙️ הגדרות
+            <i className="ti ti-settings" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> הגדרות
           </button>
           <span className="tdb-live-dot" />
           <span className="tdb-live-label">{todayLabel}</span>
@@ -667,7 +931,7 @@ export default function TasksDashboard() {
                   value={empSearch}
                   onChange={e => setEmpSearch(e.target.value)}
                   onClick={e => e.stopPropagation()}
-                  placeholder="🔍 חיפוש עובד..."
+                  placeholder="חיפוש עובד..."
                   autoFocus
                   style={{ width: '100%', padding: '5px 8px', marginBottom: 6, borderRadius: 6, border: '1.5px solid #C5E3F7', fontSize: 12, boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }}
                 />
@@ -754,15 +1018,15 @@ export default function TasksDashboard() {
       {/* KPI Cards */}
       <div className="tdb-kpi-grid">
         {[
-          { label: 'סה"כ משימות',    value: kpi.total, color: FO.TEXT_DARK, sub: `${kpi.pct}% מהסה"כ הושלמו`, icon: '📋' },
-          { label: 'הושלמו',         value: kpi.done,  color: FO.SUCCESS,   sub: `${kpi.total ? Math.round(kpi.done / kpi.total * 100) : 0}% מהסה"כ`, icon: '✓' },
-          { label: 'פתוחות / באיחור', value: `${kpi.open} / ${kpi.late}`, color: FO.DANGER, sub: `${kpi.late} עברו תאריך יעד`, icon: '⏰' },
-          { label: 'עובדים מוצגים',  value: kpi.emps,  color: FO.B600,     sub: `מתוך ${allUsers.length} עובדים`, icon: '👥' },
+          { label: 'סה"כ משימות',    value: kpi.total, color: FO.TEXT_DARK, sub: `${kpi.pct}% מהסה"כ הושלמו`, icon: 'ti-clipboard-list' },
+          { label: 'הושלמו',         value: kpi.done,  color: FO.SUCCESS,   sub: `${kpi.total ? Math.round(kpi.done / kpi.total * 100) : 0}% מהסה"כ`, icon: 'ti-circle-check' },
+          { label: 'פתוחות / באיחור', value: `${kpi.open} / ${kpi.late}`, color: FO.DANGER, sub: `${kpi.late} עברו תאריך יעד`, icon: 'ti-clock' },
+          { label: 'עובדים מוצגים',  value: kpi.emps,  color: FO.B600,     sub: `מתוך ${allUsers.length} עובדים`, icon: 'ti-users' },
         ].map(k => (
           <div key={k.label} className="tdb-kpi-card">
             <div className="tdb-kpi-header">
               <span className="tdb-kpi-label">{k.label}</span>
-              <span className="tdb-kpi-icon">{k.icon}</span>
+              <span className="tdb-kpi-icon"><i className={`ti ${k.icon}`} aria-hidden="true" /></span>
             </div>
             <div className="tdb-kpi-val" style={{ color: k.color }}>{k.value}</div>
             <div className="tdb-kpi-sub">{k.sub}</div>

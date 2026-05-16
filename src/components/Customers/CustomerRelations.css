@@ -1,0 +1,83 @@
+.rel-stats {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.rel-stat {
+  flex: 1;
+  min-width: 120px;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  text-align: center;
+}
+
+.rel-stat-count {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.rel-stat-label {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 4px;
+}
+
+.rel-canvas-wrap {
+  padding: 14px;
+  overflow: auto;
+  max-width: 100%;
+}
+
+.rel-canvas {
+  display: block;
+  min-width: 100%;
+}
+
+.rel-node:hover rect {
+  filter: brightness(0.97);
+  stroke-width: 2.5;
+}
+
+.rel-node-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  height: 100%;
+  font-family: inherit;
+}
+
+.rel-node-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.rel-node-num {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-1);
+  flex-shrink: 0;
+}
+
+.rel-node-sub {
+  font-size: 11px;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.rel-node-status {
+  font-size: 10px;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}

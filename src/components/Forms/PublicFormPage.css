@@ -1,0 +1,70 @@
+.public-form-page {
+  min-height: 100vh;
+  background: var(--bg-page, #f8fafc);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 32px 16px 64px;
+}
+
+.public-form-container {
+  width: 100%;
+  max-width: 680px;
+}
+
+.public-form-icon {
+  text-align: center;
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+/* Loading */
+.public-form-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  color: var(--text-3, #94a3b8);
+  font-size: 14px;
+  gap: 16px;
+}
+
+.public-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border, #e2e8f0);
+  border-top-color: var(--accent, #2563eb);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Error */
+.public-form-error {
+  text-align: center;
+  padding: 60px 20px;
+  background: var(--bg-card, #fff);
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.public-form-error .error-icon { font-size: 48px; margin-bottom: 12px; }
+.public-form-error h2 { margin: 0 0 8px; color: var(--text-1, #0f172a); }
+.public-form-error p { color: var(--danger, #ef4444); font-size: 14px; }
+
+/* Success */
+.public-form-success {
+  text-align: center;
+  padding: 60px 20px;
+  background: var(--bg-card, #fff);
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.public-form-success .success-icon { font-size: 64px; margin-bottom: 16px; }
+.public-form-success h2 { margin: 0 0 10px; color: var(--success, #22c55e); font-size: 22px; }
+.public-form-success p { color: var(--text-2, #475569); font-size: 15px; line-height: 1.6; }
+
+/* Responsive */
+@media (max-width: 720px) {
+  .public-form-page { padding: 16px 8px 48px; }
+}

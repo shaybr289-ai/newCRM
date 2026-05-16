@@ -1,0 +1,254 @@
+/* Graphical hierarchy tree — RTL, vertical layout. Connector lines drawn with borders. */
+
+.hier-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+
+.hier-toolbar h3 {
+  margin: 0;
+  font-size: 14px;
+  flex: 1;
+}
+
+.hier-canvas {
+  background: #FAFAFA;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px 18px;
+  min-height: 400px;
+  overflow-x: auto;
+}
+
+/* Root row container — categories list */
+.hier-roots {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* A single node (row) */
+.hier-node {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.hier-node-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #FFFFFF;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: default;
+  transition: all 0.15s;
+  align-self: flex-start;
+  position: relative;
+  min-width: 200px;
+  max-width: 100%;
+}
+
+.hier-node-header:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.hier-node-header[draggable="true"] {
+  cursor: grab;
+}
+
+.hier-node-header[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.hier-node-header.is-dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+.hier-node-header.is-drop-target {
+  border-color: #10B981;
+  background: #ECFDF5;
+  box-shadow: 0 0 0 2px #10B98155;
+}
+
+.hier-drag-handle {
+  color: var(--text-3);
+  font-size: 14px;
+  letter-spacing: -2px;
+  user-select: none;
+  cursor: grab;
+  margin-left: 2px;
+  flex-shrink: 0;
+}
+
+.hier-node-header.is-category {
+  background: #FFF7ED;
+  border-color: #F59E0B;
+  font-weight: 700;
+}
+
+.hier-node-header.is-family-root {
+  background: #EFF6FF;
+  border-color: #3B82F6;
+  font-weight: 600;
+}
+
+.hier-node-header.is-family-deep {
+  background: #FFFFFF;
+  border-color: #94A3B8;
+}
+
+.hier-node-toggle {
+  width: 18px;
+  height: 18px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: transparent;
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+  color: inherit;
+  line-height: 1;
+}
+
+.hier-node-toggle.empty {
+  visibility: hidden;
+}
+
+.hier-node-name {
+  font-size: 13px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hier-num {
+  font-weight: 700;
+}
+
+.hier-cat-icon {
+  flex-shrink: 0;
+}
+
+.hier-node-meta {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-right: 6px;
+}
+
+.hier-node-actions {
+  display: inline-flex;
+  gap: 4px;
+  margin-right: auto;
+  padding-right: 12px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.hier-node-header:hover .hier-node-actions {
+  opacity: 1;
+}
+
+.hier-node-action {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--text-2);
+}
+
+.hier-node-action:hover {
+  background: rgba(0,0,0,0.06);
+}
+
+.hier-node-action.danger:hover {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+
+/* Children container — indent toward LEFT (RTL), vertical line on RIGHT side */
+.hier-children {
+  margin-right: 26px;       /* indent (RTL means to the left visually) */
+  padding-right: 22px;      /* room for connector lines */
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-right: 1.5px dashed #CBD5E1;
+  position: relative;
+}
+
+/* Horizontal connector from vertical line to each child node */
+.hier-children > .hier-node::before {
+  content: '';
+  position: absolute;
+  top: 18px;
+  right: -22px;
+  width: 22px;
+  border-top: 1.5px dashed #CBD5E1;
+}
+
+/* Hide vertical line below the last child */
+.hier-children > .hier-node:last-child::after {
+  content: '';
+  position: absolute;
+  top: 19px;
+  bottom: 0;
+  right: -23px;
+  width: 3px;
+  background: #FAFAFA;
+}
+
+.hier-empty {
+  text-align: center;
+  color: var(--text-3);
+  padding: 60px 20px;
+  font-size: 13px;
+}
+
+/* Level definitions modal */
+.level-defs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.level-defs-table th, .level-defs-table td {
+  padding: 8px 10px;
+  text-align: right;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.level-defs-table th {
+  background: var(--bg-page);
+  font-weight: 600;
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.level-defs-table input {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+}

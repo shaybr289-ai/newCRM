@@ -1,0 +1,140 @@
+/* ── Deal Editor Top Bar ──────────────────────────────────────────────────── */
+.de-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 16px;
+}
+.de-topbar-title { flex: 1; }
+.de-topbar-title h1 { font-size: 18px; font-weight: 700; }
+.de-deal-num { font-size: 13px; color: var(--text-2); margin-right: 8px; }
+
+/* ── Pipeline Progress Bar ───────────────────────────────────────────────── */
+.de-pipeline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+}
+
+.de-pipeline-bar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  position: relative;
+}
+
+.de-stage-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 4px 2px;
+  position: relative;
+  font-family: 'Poppins', sans-serif;
+  transition: all 0.2s;
+}
+.de-stage-step:hover .de-stage-dot {
+  transform: scale(1.15);
+}
+
+/* Connector line between steps */
+.de-stage-step::before {
+  content: '';
+  position: absolute;
+  top: 14px;
+  right: 50%;
+  left: -50%;
+  height: 3px;
+  background: var(--border);
+  z-index: 0;
+}
+.de-stage-step:first-child::before { display: none; }
+.de-stage-step.done::before { background: var(--stage-color); }
+.de-stage-step.current::before { background: var(--stage-color); }
+
+.de-stage-dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  z-index: 1;
+  transition: all 0.2s;
+  border: 2px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-3);
+}
+
+.de-stage-step.done .de-stage-dot {
+  background: var(--stage-color);
+  border-color: var(--stage-color);
+  color: white;
+  font-size: 12px;
+}
+
+.de-stage-step.current .de-stage-dot {
+  background: var(--stage-color);
+  border-color: var(--stage-color);
+  color: white;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--stage-color) 20%, transparent);
+  transform: scale(1.1);
+}
+
+.de-stage-label {
+  font-size: 10px;
+  color: var(--text-3);
+  font-weight: 500;
+  white-space: nowrap;
+  max-width: 70px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.de-stage-step.done .de-stage-label,
+.de-stage-step.current .de-stage-label {
+  color: var(--text-1);
+  font-weight: 600;
+}
+
+/* Lost button */
+.de-stage-lost {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-3);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: 'Poppins', sans-serif;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.de-stage-lost:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.de-stage-lost.active {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: white;
+  font-weight: 600;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .de-pipeline-bar { flex-wrap: wrap; gap: 4px; }
+  .de-stage-step::before { display: none; }
+  .de-stage-dot { width: 26px; height: 26px; font-size: 8px; }
+  .de-stage-label { font-size: 9px; max-width: 55px; }
+}

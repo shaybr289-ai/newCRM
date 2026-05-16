@@ -1,0 +1,175 @@
+/* ── FieldOps Toggle Switch ────────────────────────────────────────────────── */
+.fo-toggle-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  direction: rtl;
+  min-height: 36px;
+  padding: 0 2px;
+}
+.fo-toggle-wrap input[type="checkbox"] {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+.fo-toggle-pill {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  border-radius: 100px;
+  background: #D0DDED;
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+}
+.fo-toggle-pill::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+  transition: right 0.2s ease;
+}
+.fo-toggle-wrap input:checked + .fo-toggle-pill {
+  background: #1A91D9;
+}
+.fo-toggle-wrap input:checked + .fo-toggle-pill::after {
+  right: calc(100% - 22px);
+}
+.fo-toggle-wrap input:disabled + .fo-toggle-pill {
+  background: #E8EDF2;
+  opacity: 0.55;
+}
+.fo-toggle-wrap:has(input:disabled) { cursor: not-allowed; }
+.fo-toggle-wrap input:focus-visible + .fo-toggle-pill {
+  box-shadow: 0 0 0 3px rgba(26, 145, 217, 0.28);
+}
+.fo-toggle-wrap:not(:has(input:disabled)):hover .fo-toggle-pill {
+  box-shadow: 0 0 0 3px rgba(26, 145, 217, 0.14);
+}
+.fo-toggle-label {
+  font-family: 'Rubik', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #042C53;
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* ── Module Permissions Table ─────────────────────────────────────────────── */
+.up-perms-table {
+  width: auto;          /* ← מצמצם את הטבלה לגודל תוכן, לא 100% */
+  font-size: 13px;
+  border-collapse: collapse;
+  direction: rtl;
+}
+.up-perms-table th,
+.up-perms-table td {
+  border-bottom: 1px solid var(--border, #E2E8F0);
+}
+.up-perms-th-module {
+  padding: 10px 16px 10px 24px;
+  text-align: right;
+  font-weight: 700;
+  color: #042C53;
+  white-space: nowrap;
+  background: var(--bg-elevated, #F8FAFC);
+}
+.up-perms-th-action {
+  padding: 10px 20px;
+  text-align: center;
+  font-weight: 700;
+  color: #042C53;
+  white-space: nowrap;
+  background: var(--bg-elevated, #F8FAFC);
+  min-width: 80px;
+}
+.up-perms-row:hover { background: #F0F7FF; }
+.up-perms-td-module {
+  padding: 8px 16px 8px 24px;
+  text-align: right;
+  font-weight: 500;
+  color: #042C53;
+  white-space: nowrap;
+}
+.up-perms-td-action {
+  padding: 6px 20px;
+  text-align: center;
+  vertical-align: middle;
+}
+/* Center the toggle inside action cells */
+.up-perms-td-action .fo-toggle-wrap,
+.up-perms-th-action .fo-toggle-wrap {
+  justify-content: center;
+  min-height: unset;
+}
+
+/* ── Tool Permission Cards ────────────────────────────────────────────────── */
+.up-tool-card {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--bg-elevated, #F8FAFC);
+  border-radius: 8px;
+  border: 1px solid transparent;
+  transition: border-color 0.15s, background 0.15s;
+}
+.up-tool-card:has(input:checked) {
+  background: #E8F4FD;
+  border-color: rgba(26, 145, 217, 0.3);
+}
+
+/* ── Icon Action Buttons ──────────────────────────────────────────────────── */
+.up-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px; height: 30px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: none;
+  cursor: pointer;
+  font-size: 15px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.up-icon-btn--edit { color: #0A5E9A; }
+.up-icon-btn--edit:hover { background: #E8F4FD; border-color: #C5E3F7; color: #074876; }
+.up-icon-btn--del  { color: #94A3B8; }
+.up-icon-btn--del:hover  { background: #FEE2E2; border-color: #FECACA; color: #DC2626; }
+
+/* ── Mobile Module Cards ─────────────────────────────────────────────────── */
+.up-mobile-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--bg-elevated, #F8FAFC);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  transition: background 0.15s, border-color 0.15s;
+  direction: rtl;
+}
+.up-mobile-card--on {
+  background: rgba(0, 151, 167, 0.07);
+  border-color: rgba(0, 151, 167, 0.28);
+}
+.up-mobile-label {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: #042C53;
+}
+/* Push toggle to far left */
+.up-mobile-card .fo-toggle-wrap {
+  margin-right: auto;
+  margin-left: 0;
+}

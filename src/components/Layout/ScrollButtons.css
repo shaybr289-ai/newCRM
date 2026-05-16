@@ -1,0 +1,46 @@
+.scroll-buttons {
+  position: fixed;
+  left: 20px;
+  bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 900;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.scroll-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  border: none;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.scroll-btn:hover {
+  background: var(--accent-hover);
+  transform: scale(1.08);
+  box-shadow: var(--shadow-lg);
+}
+
+.scroll-btn:active {
+  transform: scale(0.95);
+}
+
+@media (max-width: 600px) {
+  .scroll-buttons {
+    left: 12px;
+    bottom: 12px;
+  }
+  .scroll-btn {
+    width: 36px;
+    height: 36px;
+  }
+}

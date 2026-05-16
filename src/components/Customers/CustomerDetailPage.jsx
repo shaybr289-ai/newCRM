@@ -12,6 +12,7 @@ import CustomerModal from './CustomerModal';
 import CustomerServicesDashboard from '../Dashboards/CustomerServicesDashboard';
 import OwnerSelect from '../Layout/OwnerSelect';
 import './CustomerDetailPage.css';
+import '../Tasks/TasksDashboard.css';
 
 const TABS = [
   { id: 'info', label: 'פרטי לקוח', icon: 'customers' },
@@ -32,6 +33,7 @@ export default function CustomerDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('info');
+  const [siteFilter, setSiteFilter] = useState('');
   const [editCust, setEditCust] = useState(null);
   const [editContact, setEditContact] = useState(null);
   const [editSite, setEditSite] = useState(null);
@@ -249,11 +251,11 @@ export default function CustomerDetailPage() {
           <div style={{ display: 'flex', gap: 24, marginTop: 16 }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
               <input type="checkbox" checked={!!editContact.is_primary} onChange={e => upd('is_primary', e.target.checked)} style={{ width: 18, height: 18 }} />
-              <span>⭐ איש קשר ראשי</span>
+              <span><i className="ti ti-star" aria-hidden="true" style={{ verticalAlign: '-2px', color: '#f59e0b', marginLeft: 2 }} /> איש קשר ראשי</span>
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
               <input type="checkbox" checked={!!editContact.is_vip} onChange={e => upd('is_vip', e.target.checked)} style={{ width: 18, height: 18 }} />
-              <span>👑 VIP</span>
+              <span><i className="ti ti-crown" aria-hidden="true" style={{ verticalAlign: '-2px', color: '#8b5cf6', marginLeft: 2 }} /> VIP</span>
             </label>
           </div>
 
@@ -268,32 +270,40 @@ export default function CustomerDetailPage() {
 
   return (
     <div className="animate-in">
-      {/* Top Bar */}
-      <div className="detail-topbar">
-        <Link to="/customers" className="btn btn-ghost">
-          <Icon svg={ICONS.back} size={16} /> רשימת לקוחות
-        </Link>
-        <div className="detail-topbar-actions">
-          <button className="btn btn-secondary" onClick={() => navigate(`/customers/${customer.id}/relations`)}>🕸 מפת קשרים</button>
-          <button className="btn btn-secondary" onClick={() => setEditCust(customer)}>עריכת לקוח</button>
-          <button className="btn btn-danger" onClick={() => setConfirmDel(true)}>מחק</button>
-        </div>
-      </div>
-
-      {/* Customer Header */}
-      <div className="detail-header card">
-        <div className="detail-header-avatar">
-          {(customer.company_name || '?')[0]}
-        </div>
-        <div className="detail-header-info">
-          <h1 className="detail-header-name">{customer.company_name}</h1>
-          <div className="detail-header-meta">
-            {customer.cust_num && <span className="detail-meta-item">#{customer.cust_num}</span>}
-            <span className="detail-meta-item">{getClientTypeLabel(customer.client_type)}</span>
-            <span className={`badge ${customer.status === 'active' ? 'badge-success' : 'badge-danger'}`}>
-              {customer.status === 'active' ? 'פעיל' : 'לא פעיל'}
-            </span>
+      {/* Blue Module Topbar */}
+      <div className="tdb-topbar" style={{ borderRadius: 14, marginBottom: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }}>
+        <div className="tdb-topbar-left">
+          <Link to="/customers" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,0.75)', fontSize: 13, textDecoration: 'none', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 8, padding: '5px 12px', transition: 'background 0.15s' }}
+            onMouseOver={e => e.currentTarget.style.background='rgba(255,255,255,0.25)'}
+            onMouseOut={e => e.currentTarget.style.background='rgba(255,255,255,0.15)'}>
+            ← לקוחות
+          </Link>
+          <span className="tdb-topbar-icon"><i className="ti ti-users" aria-hidden="true" /></span>
+          {/* Avatar */}
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, color: 'white', flexShrink: 0 }}>
+            {(customer.company_name || '?')[0]}
           </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <h1 className="tdb-topbar-title">{customer.company_name}</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, opacity: 0.85 }}>
+              {customer.cust_num && <span>#{customer.cust_num}</span>}
+              <span>{getClientTypeLabel(customer.client_type)}</span>
+              <span style={{ background: customer.status === 'active' ? '#22c55e33' : '#ef444433', color: customer.status === 'active' ? '#86efac' : '#fca5a5', border: `1px solid ${customer.status === 'active' ? '#22c55e66' : '#ef444466'}`, borderRadius: 999, padding: '1px 8px', fontSize: 11, fontWeight: 600 }}>
+                {customer.status === 'active' ? 'פעיל' : 'לא פעיל'}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="tdb-topbar-right">
+          <button className="tdb-calendar-btn" onClick={() => navigate(`/customers/${customer.id}/relations`)}>
+            <i className="ti ti-hierarchy" aria-hidden="true" /> מפת קשרים
+          </button>
+          <button className="tdb-calendar-btn" onClick={() => setEditCust(customer)} style={{ fontWeight: 700 }}>
+            <i className="ti ti-edit" aria-hidden="true" /> עריכת לקוח
+          </button>
+          <button className="tdb-calendar-btn" onClick={() => setConfirmDel(true)} style={{ background: 'rgba(239,68,68,0.25)', borderColor: 'rgba(239,68,68,0.5)' }}>
+            <i className="ti ti-trash" aria-hidden="true" /> מחק
+          </button>
         </div>
       </div>
 
@@ -318,26 +328,46 @@ export default function CustomerDetailPage() {
       <div className="detail-content card">
         {activeTab === 'info' && <InfoTab customer={customer} />}
         {activeTab === 'contacts' && (
-          <RelatedTab
-            title="אנשי קשר"
-            items={contacts}
-            columns={[
-              { key: 'first_name', label: 'שם פרטי' },
-              { key: 'last_name', label: 'שם משפחה' },
-              { key: 'role', label: 'תפקיד' },
-              { key: 'department', label: 'מחלקה' },
-              { key: 'email', label: 'אי-מייל' },
-              { key: 'mobile', label: 'נייד' },
-              { key: 'site_id', label: 'אתר', render: v => sites.find(s => s.id === v)?.site_name || '—' },
-              { key: 'is_primary', label: 'ראשי', render: v => v ? '⭐' : '' },
-              { key: 'is_vip', label: 'VIP', render: v => v ? '👑' : '' },
-              { key: 'status', label: 'סטטוס', render: v => <span className={`badge ${v === 'active' ? 'badge-success' : 'badge-danger'}`}>{v === 'active' ? 'פעיל' : 'לא פעיל'}</span> },
-            ]}
-            onAdd={() => setEditContact({ ...EMPTY_CONTACT, customer_id: id })}
-            addLabel="איש קשר חדש"
-            onEdit={(item) => setEditContact({ ...item })}
-            onDelete={(item) => setConfirmDelRelated({ type: 'contact', item })}
-          />
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>סנן לפי אתר:</label>
+              <select
+                value={siteFilter}
+                onChange={e => setSiteFilter(e.target.value)}
+                style={{ fontSize: 13, padding: '5px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontFamily: 'inherit', background: 'var(--bg-card)', color: 'var(--text-1)' }}
+              >
+                <option value="">כל האתרים ({contacts.length})</option>
+                {sites.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.site_name} ({contacts.filter(c => String(c.site_id) === String(s.id)).length})
+                  </option>
+                ))}
+              </select>
+              {siteFilter && (
+                <button className="btn btn-ghost" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => setSiteFilter('')}>× נקה</button>
+              )}
+            </div>
+            <RelatedTab
+              title="אנשי קשר"
+              items={siteFilter ? contacts.filter(c => String(c.site_id) === String(siteFilter)) : contacts}
+              columns={[
+                { key: 'first_name', label: 'שם פרטי' },
+                { key: 'last_name', label: 'שם משפחה' },
+                { key: 'role', label: 'תפקיד' },
+                { key: 'department', label: 'מחלקה' },
+                { key: 'email', label: 'אי-מייל' },
+                { key: 'mobile', label: 'נייד' },
+                { key: 'site_id', label: 'אתר', render: v => sites.find(s => s.id === v)?.site_name || '—' },
+                { key: 'is_primary', label: 'ראשי', render: v => v ? <i className="ti ti-star" aria-hidden="true" style={{ color: '#f59e0b' }} /> : '' },
+                { key: 'is_vip', label: 'VIP', render: v => v ? <i className="ti ti-crown" aria-hidden="true" style={{ color: '#8b5cf6' }} /> : '' },
+                { key: 'status', label: 'סטטוס', render: v => <span className={`badge ${v === 'active' ? 'badge-success' : 'badge-danger'}`}>{v === 'active' ? 'פעיל' : 'לא פעיל'}</span> },
+              ]}
+              onAdd={() => setEditContact({ ...EMPTY_CONTACT, customer_id: id })}
+              addLabel="איש קשר חדש"
+              onEdit={(item) => setEditContact({ ...item })}
+              onDelete={(item) => setConfirmDelRelated({ type: 'contact', item })}
+            />
+          </>
         )}
         {activeTab === 'sites' && (
           <RelatedTab
@@ -487,10 +517,10 @@ export default function CustomerDetailPage() {
               </div>
               <div style={{ display: 'flex', gap: 20, marginTop: 12 }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
-                  <input type="checkbox" checked={!!editContact.is_primary} onChange={e=>setEditContact(p=>({...p,is_primary:e.target.checked}))} style={{ width: 16, height: 16 }} /> ⭐ איש קשר ראשי
+                  <input type="checkbox" checked={!!editContact.is_primary} onChange={e=>setEditContact(p=>({...p,is_primary:e.target.checked}))} style={{ width: 16, height: 16 }} /> <i className="ti ti-star" aria-hidden="true" style={{ verticalAlign: '-2px', color: '#f59e0b', marginLeft: 2 }} /> איש קשר ראשי
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
-                  <input type="checkbox" checked={!!editContact.is_vip} onChange={e=>setEditContact(p=>({...p,is_vip:e.target.checked}))} style={{ width: 16, height: 16 }} /> 👑 VIP
+                  <input type="checkbox" checked={!!editContact.is_vip} onChange={e=>setEditContact(p=>({...p,is_vip:e.target.checked}))} style={{ width: 16, height: 16 }} /> <i className="ti ti-crown" aria-hidden="true" style={{ verticalAlign: '-2px', color: '#8b5cf6', marginLeft: 2 }} /> VIP
                 </label>
               </div>
               <div className="form-field" style={{ marginTop: 12 }}>
@@ -555,7 +585,7 @@ export default function CustomerDetailPage() {
                             cursor: 'pointer', fontSize: 13, fontWeight: checked ? 600 : 400,
                             transition: 'all 0.2s',
                           }}>
-                          {checked && <span style={{ fontSize: 12 }}>✓</span>}
+                          {checked && <i className="ti ti-check" aria-hidden="true" style={{ fontSize: 12 }} />}
                           {c.first_name} {c.last_name || ''}
                           {c.role && <span style={{ fontSize: 11, opacity: 0.75 }}>({c.role})</span>}
                         </button>
@@ -695,7 +725,7 @@ export default function CustomerDetailPage() {
                               cursor: 'pointer', fontSize: 13, fontWeight: checked ? 600 : 400,
                               fontFamily: "'Poppins', sans-serif", transition: 'all 0.2s',
                             }}>
-                            {checked && <span style={{ fontSize: 12 }}>✓</span>}
+                            {checked && <i className="ti ti-check" aria-hidden="true" style={{ fontSize: 12 }} />}
                             {site.site_name}
                             {site.city && <span style={{ fontSize: 11, opacity: 0.8 }}>{site.city}</span>}
                           </button>
@@ -860,8 +890,8 @@ function RelatedTab({ title, items, columns, onAdd, addLabel, onEdit, onDelete }
                   {hasActions && (
                     <td onClick={e => e.stopPropagation()}>
                       <div style={{ display: 'flex', gap: 4 }}>
-                        {onEdit && <button className="action-btn edit" onClick={() => onEdit(item)} title="ערוך">✏️</button>}
-                        {onDelete && <button className="action-btn delete" onClick={() => onDelete(item)} title="מחק">🗑️</button>}
+                        {onEdit && <button className="action-btn edit" onClick={() => onEdit(item)} title="ערוך"><i className="ti ti-edit" aria-hidden="true" /></button>}
+                        {onDelete && <button className="action-btn delete" onClick={() => onDelete(item)} title="מחק"><i className="ti ti-trash" aria-hidden="true" /></button>}
                       </div>
                     </td>
                   )}

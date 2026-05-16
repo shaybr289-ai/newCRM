@@ -1,0 +1,570 @@
+/* ── FieldOps Design System — Tasks Calendar ─────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap');
+
+/* ── Page shell ──────────────────────────────────────────────────────────── */
+.tcal-page {
+  font-family: 'Rubik', sans-serif;
+  direction: rtl;
+  background: #F0F7FF;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 48px); /* fills main area */
+  overflow: hidden;
+}
+
+/* ── Top Bar ─────────────────────────────────────────────────────────────── */
+.tcal-topbar {
+  background: #074876;
+  color: #fff;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  gap: 16px;
+}
+.tcal-topbar-start {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tcal-topbar-icon { font-size: 18px; }
+.tcal-topbar-title { margin: 0; font-size: 16px; font-weight: 700; }
+.tcal-back-btn {
+  background: rgba(255,255,255,.12);
+  border: none; color: #fff;
+  padding: 5px 12px; border-radius: 8px;
+  font-family: 'Rubik', sans-serif;
+  font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: background .15s;
+}
+.tcal-back-btn:hover { background: rgba(255,255,255,.22); }
+
+/* View toggle */
+.tcal-view-toggle {
+  display: flex;
+  background: rgba(255,255,255,.12);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+.tcal-view-btn {
+  background: none; border: none; color: rgba(255,255,255,.75);
+  padding: 5px 14px; border-radius: 8px;
+  font-family: 'Rubik', sans-serif; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.tcal-view-btn.active { background: #1A91D9; color: #fff; }
+.tcal-view-btn:hover:not(.active) { background: rgba(255,255,255,.1); color: #fff; }
+
+/* ── Toolbar ─────────────────────────────────────────────────────────────── */
+.tcal-toolbar {
+  background: #fff;
+  border-bottom: 1.5px solid #C5E3F7;
+  padding: 10px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* Navigation */
+.tcal-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tcal-nav-arr {
+  background: #E8F4FD; border: 1.5px solid #C5E3F7;
+  color: #0A5E9A; width: 30px; height: 30px;
+  border-radius: 8px; font-size: 18px; line-height: 1;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-family: 'Rubik', sans-serif; transition: background .13s;
+}
+.tcal-nav-arr:hover { background: #C5E3F7; }
+.tcal-today-btn {
+  background: #1A91D9; color: #fff;
+  border: none; padding: 5px 12px; border-radius: 8px;
+  font-family: 'Rubik', sans-serif; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: background .13s;
+}
+.tcal-today-btn:hover { background: #0A5E9A; }
+.tcal-nav-title {
+  font-size: 14px; font-weight: 700; color: #042C53;
+  min-width: 200px; text-align: center;
+}
+
+/* Employee pills */
+.tcal-emp-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+.tcal-pills-label {
+  font-size: 11px; font-weight: 600; color: #5B7FA6; white-space: nowrap;
+}
+.tcal-pill {
+  padding: 4px 10px; border-radius: 20px;
+  border: 1.5px solid #C5E3F7; background: #fff;
+  color: #0A5E9A; font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: all .13s;
+  font-family: 'Rubik', sans-serif;
+  display: flex; align-items: center; gap: 5px;
+}
+.tcal-pill:hover { border-color: #1A91D9; color: #1A91D9; }
+.tcal-pill.active { background: #1A91D9; border-color: #1A91D9; color: #fff; }
+.tcal-pill--emp.active { /* dynamic inline style handles bg */ }
+.tcal-pill-av {
+  width: 18px; height: 18px; border-radius: 50%;
+  color: #fff; font-size: 9px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Legend */
+.tcal-legend {
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+}
+.tcal-legend-item {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 10px; color: #5B7FA6; font-weight: 500;
+  white-space: nowrap;
+}
+.tcal-legend-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+
+/* ── Calendar Body ───────────────────────────────────────────────────────── */
+.tcal-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.tcal-loading {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  color: #5B7FA6; font-size: 14px;
+}
+
+/* ── Column headers (shared by week + day) ───────────────────────────────── */
+.tcal-col-headers {
+  display: flex;
+  background: #fff;
+  border-bottom: 1.5px solid #C5E3F7;
+  flex-shrink: 0;
+}
+.tcal-col-hdr {
+  flex: 1;
+  text-align: center;
+  padding: 8px 4px;
+  border-right: 1px solid #E8F4FD;
+}
+.tcal-col-hdr--today { background: #E8F4FD; }
+.tcal-col-hdr-day  { font-size: 10px; color: #5B7FA6; font-weight: 500; }
+.tcal-col-hdr-num  {
+  font-size: 20px; font-weight: 700; color: #042C53;
+  width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 2px auto 0;
+}
+.tcal-col-hdr-num.today {
+  background: #1A91D9; color: #fff;
+}
+.tcal-col-hdr-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  color: #fff; font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 4px;
+}
+
+/* ── All-day row ─────────────────────────────────────────────────────────── */
+.tcal-allday-row {
+  display: flex;
+  background: #fafcff;
+  border-bottom: 1.5px solid #C5E3F7;
+  flex-shrink: 0;
+  min-height: 28px;
+}
+.tcal-allday-gutter {
+  flex-shrink: 0;
+  font-size: 9px; color: #5B7FA6;
+  display: flex; align-items: center; justify-content: center;
+  border-left: 1.5px solid #C5E3F7;
+  padding: 4px 2px;
+}
+.tcal-allday-cell {
+  flex: 1;
+  padding: 3px 4px;
+  border-right: 1px solid #E8F4FD;
+  display: flex; flex-direction: column; gap: 2px;
+}
+
+/* ── Scroll body (week/day) ──────────────────────────────────────────────── */
+.tcal-scroll-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #C5E3F7 transparent;
+}
+.tcal-scroll-body::-webkit-scrollbar { width: 6px; }
+.tcal-scroll-body::-webkit-scrollbar-thumb { background: #C5E3F7; border-radius: 4px; }
+
+/* ── Time grid ───────────────────────────────────────────────────────────── */
+.tcal-time-grid {
+  display: flex;
+  min-width: 0;
+}
+.tcal-gutter {
+  flex-shrink: 0;
+  border-left: 1.5px solid #C5E3F7;
+}
+.tcal-hour-label {
+  font-size: 10px; color: #5B7FA6;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-top: 4px;
+  border-bottom: 1px solid #E8F4FD;
+  box-sizing: border-box;
+}
+
+/* Day column */
+.tcal-col {
+  flex: 1;
+  position: relative;
+  border-right: 1px solid #E8F4FD;
+  background: #fff;
+  min-width: 80px;
+}
+.tcal-col--today { background: #FAFCFF; }
+
+/* Clickable hour slot */
+.tcal-slot {
+  position: absolute;
+  left: 0; right: 0;
+  border-bottom: 1px dashed #E8F4FD;
+  cursor: crosshair;
+  box-sizing: border-box;
+  z-index: 0;
+  transition: background .1s;
+}
+.tcal-slot:hover { background: rgba(26,145,217,.05); }
+
+/* Current time indicator */
+.tcal-now-line {
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  background: #E2445C;
+  z-index: 10;
+}
+.tcal-now-dot {
+  position: absolute;
+  right: -4px; top: -4px;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: #E2445C;
+}
+
+/* ── Week view ───────────────────────────────────────────────────────────── */
+.tcal-week-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Day view ────────────────────────────────────────────────────────────── */
+.tcal-day-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Month view ──────────────────────────────────────────────────────────── */
+.tcal-month-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.tcal-month-hdr {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: #fff;
+  border-bottom: 1.5px solid #C5E3F7;
+  flex-shrink: 0;
+}
+.tcal-month-dayname {
+  text-align: center;
+  padding: 8px 4px;
+  font-size: 11px; font-weight: 600; color: #5B7FA6;
+  border-right: 1px solid #E8F4FD;
+}
+.tcal-month-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  overflow-y: auto;
+}
+.tcal-month-cell {
+  background: #fff;
+  border-bottom: 1px solid #E8F4FD;
+  border-right: 1px solid #E8F4FD;
+  padding: 4px;
+  min-height: 100px;
+  cursor: pointer;
+  transition: background .12s;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tcal-month-cell:hover { background: #F0F7FF; }
+.tcal-month-cell.today { background: #EBF5FF; }
+.tcal-month-cell.other { background: #FAFAFA; }
+.tcal-month-num {
+  font-size: 12px; font-weight: 600; color: #042C53;
+  width: 24px; height: 24px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 2px;
+}
+.tcal-month-num.today {
+  background: #1A91D9; color: #fff;
+}
+.tcal-month-cell.other .tcal-month-num { color: #B0BEC5; }
+.tcal-month-more {
+  font-size: 10px; color: #1A91D9; font-weight: 600;
+  padding: 1px 4px;
+}
+
+/* ── Task Event Block ────────────────────────────────────────────────────── */
+.tcal-event {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  cursor: grab;
+  font-size: 11px;
+  font-weight: 600;
+  overflow: hidden;
+  transition: filter .13s, transform .1s, opacity .1s;
+  box-shadow: 0 1px 3px rgba(2,31,54,.08);
+  z-index: 2;
+  user-select: none;
+}
+.tcal-event:hover { filter: brightness(.95); transform: translateY(-1px); }
+.tcal-event:active { cursor: grabbing; }
+.tcal-event--dragging {
+  opacity: 0.35 !important;
+  cursor: grabbing !important;
+  transform: none !important;
+  box-shadow: none;
+}
+.tcal-event--chip {
+  padding: 2px 6px;
+  font-size: 10px;
+}
+.tcal-event-dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+}
+.tcal-event-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tcal-event-time {
+  font-size: 9px; opacity: .75; white-space: nowrap; flex-shrink: 0;
+}
+.tcal-drag-handle {
+  font-size: 12px; opacity: .35; flex-shrink: 0; margin-right: 2px;
+  cursor: grab;
+}
+.tcal-event:hover .tcal-drag-handle { opacity: .65; }
+
+/* ── Drag-over highlights ────────────────────────────────────────────────── */
+.tcal-slot--drop {
+  background: rgba(26,145,217,.12) !important;
+  border: 1.5px dashed #1A91D9 !important;
+  box-sizing: border-box;
+}
+.tcal-drop-target {
+  background: #E8F4FD !important;
+  outline: 2px dashed #1A91D9;
+  outline-offset: -2px;
+}
+
+/* ── Toast ───────────────────────────────────────────────────────────────── */
+@keyframes tcal-toast-in {
+  0%   { opacity: 0; transform: translateY(16px) translateX(-50%); }
+  15%  { opacity: 1; transform: translateY(0)    translateX(-50%); }
+  80%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-8px) translateX(-50%); }
+}
+.tcal-toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #042C53;
+  color: #fff;
+  padding: 10px 22px;
+  border-radius: 12px;
+  font-family: 'Rubik', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 4px 20px rgba(2,31,54,.35);
+  z-index: 9999;
+  white-space: nowrap;
+  animation: tcal-toast-in 2.6s ease forwards;
+  pointer-events: none;
+}
+
+/* ── Quick Create Modal ──────────────────────────────────────────────────── */
+.tcal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(2,31,54,.35);
+  z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+}
+.tcal-new-modal {
+  background: #fff;
+  border-radius: 16px;
+  width: min(700px, 96vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 40px rgba(2,31,54,.25);
+  font-family: 'Rubik', sans-serif;
+  direction: rtl;
+  overflow: hidden;
+}
+.tcal-new-header {
+  background: #074876; color: #fff;
+  padding: 14px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 14px; font-weight: 700;
+}
+.tcal-new-close {
+  background: rgba(255,255,255,.15); border: none; color: #fff;
+  width: 28px; height: 28px; border-radius: 50%;
+  cursor: pointer; font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+}
+.tcal-new-close:hover { background: rgba(255,255,255,.3); }
+
+.tcal-new-body {
+  padding: 18px 20px;
+  display: flex; flex-direction: column; gap: 12px;
+  overflow-y: auto;
+  flex: 1;
+}
+.tcal-new-subject {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid #C5E3F7;
+  border-radius: 10px;
+  font-size: 14px; font-weight: 600;
+  font-family: 'Rubik', sans-serif;
+  color: #042C53;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color .15s;
+}
+.tcal-new-subject:focus { border-color: #1A91D9; }
+.tcal-new-row {
+  display: flex; gap: 12px;
+}
+.tcal-new-field {
+  flex: 1; display: flex; flex-direction: column; gap: 4px;
+}
+.tcal-new-field label {
+  font-size: 11px; font-weight: 600; color: #5B7FA6;
+}
+.tcal-new-field select,
+.tcal-new-field input {
+  padding: 7px 10px;
+  border: 1.5px solid #C5E3F7;
+  border-radius: 8px;
+  font-family: 'Rubik', sans-serif;
+  font-size: 12px; color: #042C53;
+  background: #fff;
+  outline: none; width: 100%; box-sizing: border-box;
+  transition: border-color .15s;
+}
+.tcal-new-field select:focus,
+.tcal-new-field input:focus { border-color: #1A91D9; }
+
+.tcal-new-footer {
+  padding: 12px 20px;
+  display: flex; justify-content: flex-start; gap: 8px;
+  border-top: 1px solid #E8F4FD;
+  background: #FAFCFF;
+}
+.tcal-btn-cancel {
+  background: none; border: 1.5px solid #C5E3F7;
+  color: #5B7FA6; padding: 7px 16px; border-radius: 8px;
+  font-family: 'Rubik', sans-serif; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all .13s;
+}
+.tcal-btn-cancel:hover { background: #E8F4FD; color: #042C53; }
+.tcal-btn-save {
+  background: #1A91D9; color: #fff;
+  border: none; padding: 7px 18px; border-radius: 8px;
+  font-family: 'Rubik', sans-serif; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: background .13s;
+}
+.tcal-btn-save:hover:not(:disabled) { background: #0A5E9A; }
+.tcal-btn-save:disabled { opacity: .55; cursor: not-allowed; }
+
+/* ── Modal section blocks ─────────────────────────────────────────────────── */
+.tcal-new-section {
+  border: 1.5px solid #E8F0FA;
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #FAFCFF;
+}
+.tcal-new-section-hdr {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0A5E9A;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #E8F0FA;
+}
+
+/* Ghost / add helper buttons inside modal */
+.tcal-ghost-btn {
+  background: none;
+  border: 1.5px solid #C5E3F7;
+  color: #5B7FA6;
+  padding: 5px 12px;
+  border-radius: 7px;
+  font-family: 'Rubik', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .13s;
+}
+.tcal-ghost-btn:hover { background: #E8F4FD; color: #042C53; }
+
+.tcal-add-btn {
+  background: #1A91D9;
+  color: #fff;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 7px;
+  font-family: 'Rubik', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .13s;
+}
+.tcal-add-btn:hover:not(:disabled) { background: #0A5E9A; }
+.tcal-add-btn:disabled { opacity: .5; cursor: not-allowed; }

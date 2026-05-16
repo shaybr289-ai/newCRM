@@ -1,0 +1,557 @@
+/* ── Screen Designer Modal ─────────────────────────────────────────────────── */
+
+.sd-layout {
+  display: flex;
+  gap: 16px;
+  min-height: 500px;
+  direction: rtl;
+}
+
+.sd-canvas {
+  flex: 1;
+  overflow-y: auto;
+  padding-left: 4px;
+}
+
+.sd-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Hints Bar */
+.sd-hints {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+.sd-hint {
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  font-weight: 500;
+}
+
+/* ── Section Card ─────────────────────────────────────────────────────────── */
+.sd-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 14px;
+  transition: opacity 0.15s, border-color 0.15s;
+}
+.sd-section.dragging { opacity: 0.4; }
+.sd-section.hidden { opacity: 0.5; }
+.sd-section.drop-target { border-color: var(--accent); }
+
+.sd-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+  border-radius: var(--radius-md);
+  transition: background 0.15s;
+}
+.sd-section-header:hover { background: var(--accent-light); }
+.sd-section-header.selected { background: var(--accent-light); }
+.sd-section-header.expanded {
+  border-bottom: 1px solid var(--border);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.sd-drag-handle {
+  color: var(--text-3);
+  font-size: 14px;
+  cursor: grab;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.sd-expand-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: var(--text-3);
+  font-size: 10px;
+  width: 16px;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.sd-expand-btn:hover { color: var(--accent); }
+
+.sd-section-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.sd-section-label {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.sd-vis-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  opacity: 0.6;
+  padding: 2px;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+.sd-vis-btn:hover { opacity: 1; }
+
+.sd-section-body {
+  padding: 16px 20px;
+}
+
+/* ── Table Columns ────────────────────────────────────────────────────────── */
+.sd-cols-label {
+  font-size: 11px;
+  color: var(--text-3);
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sd-cols-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  min-height: 40px;
+  margin-bottom: 12px;
+}
+
+.sd-col-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: grab;
+  user-select: none;
+  font-size: 12px;
+  transition: all 0.1s;
+}
+.sd-col-chip.fixed { cursor: pointer; }
+.sd-col-chip.selected { border-color: var(--accent); background: var(--accent-light); }
+.sd-col-chip.drop-target { border-color: var(--accent); background: #7C3AED15; }
+.sd-col-chip.disabled { opacity: 0.4; }
+.sd-col-chip .sd-col-label { font-weight: 500; color: var(--text-1); }
+.sd-col-chip.selected .sd-col-label { font-weight: 700; color: var(--accent); }
+
+/* ── Fields Grid ──────────────────────────────────────────────────────────── */
+.sd-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  direction: rtl;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s;
+  min-height: 0;
+}
+.sd-fields-grid.cols-1 { grid-template-columns: 1fr; }
+.sd-fields-grid.drop-active { background: var(--accent-light); }
+
+.sd-field-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--text-3);
+  font-size: 12px;
+  padding: 20px 0;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-sm);
+}
+
+/* ── Field Card ───────────────────────────────────────────────────────────── */
+.sd-field {
+  user-select: none;
+  cursor: grab;
+  transition: opacity 0.15s;
+  margin-bottom: 2px;
+  position: relative;
+}
+.sd-field.hidden { opacity: 0.4; }
+
+.sd-field-inner {
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  padding: 6px 8px;
+  transition: all 0.1s;
+}
+.sd-field-inner.selected { border-color: var(--accent); background: var(--accent-light); }
+
+/* Drop indicator line */
+.sd-field.drop-before::before,
+.sd-field.drop-after::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+  z-index: 5;
+  box-shadow: 0 0 6px rgba(124, 58, 237, 0.4);
+}
+.sd-field.drop-before::before { right: -4px; }
+.sd-field.drop-after::after { left: -4px; }
+
+/* Drop indicator arrow */
+.sd-field.drop-before .sd-drop-arrow,
+.sd-field.drop-after .sd-drop-arrow {
+  display: block;
+}
+.sd-drop-arrow {
+  display: none;
+  position: absolute;
+  z-index: 6;
+  width: 0;
+  height: 0;
+  border: 5px solid transparent;
+}
+.sd-field.drop-before .sd-drop-arrow {
+  right: -9px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-right-color: var(--accent);
+  border-left: none;
+}
+.sd-field.drop-after .sd-drop-arrow {
+  left: -9px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-left-color: var(--accent);
+  border-right: none;
+}
+
+/* Vertical drop indicators (for wrapped rows) */
+.sd-field.drop-below::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: -4px;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+  z-index: 5;
+  box-shadow: 0 0 6px rgba(124, 58, 237, 0.4);
+}
+.sd-field.drop-above::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: -4px;
+  height: 3px;
+  width: auto;
+  background: var(--accent);
+  border-radius: 2px;
+  z-index: 5;
+  box-shadow: 0 0 6px rgba(124, 58, 237, 0.4);
+}
+
+.sd-field-top {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 5px;
+}
+.sd-field-name {
+  flex: 1;
+  font-size: 11px;
+  color: var(--text-2);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  cursor: grab;
+}
+.sd-field-required { color: var(--danger); font-size: 9px; margin-right: 2px; }
+.sd-field-custom-badge {
+  font-size: 8px;
+  background: var(--accent-light);
+  color: var(--accent);
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-weight: 700;
+  margin-right: 4px;
+}
+
+.sd-type-badge {
+  font-size: 9px;
+  background: var(--bg-elevated);
+  color: var(--text-3);
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-weight: 700;
+  flex-shrink: 0;
+  font-family: monospace;
+}
+
+/* Field preview */
+.sd-field-preview {
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-3);
+  font-size: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  pointer-events: none;
+  opacity: 0.8;
+}
+.sd-field-preview textarea {
+  resize: none;
+  min-height: 36px;
+  padding: 6px 10px;
+  font-size: 12px;
+  pointer-events: none;
+  background: var(--bg-elevated);
+}
+
+/* ── Sidebar Cards ────────────────────────────────────────────────────────── */
+.sd-sidebar-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+}
+
+.sd-sidebar-title {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 12px;
+  color: var(--accent);
+}
+
+.sd-sidebar-subtitle {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin-bottom: 6px;
+}
+
+.sd-sidebar-field {
+  margin-bottom: 10px;
+}
+.sd-sidebar-field label {
+  font-size: 11px;
+  color: var(--text-2);
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+.sd-sidebar-field input,
+.sd-sidebar-field select {
+  padding: 7px 10px;
+  font-size: 12px;
+}
+
+.sd-sidebar-check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 3px 0;
+  color: var(--text-1);
+}
+
+.sd-sidebar-divider {
+  border-top: 1px solid var(--border-light);
+  margin: 8px 0;
+  padding-top: 8px;
+}
+
+.sd-sidebar-empty {
+  text-align: center;
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 2;
+  padding: 16px 10px;
+}
+.sd-sidebar-empty-icon {
+  font-size: 28px;
+  margin-bottom: 4px;
+}
+
+/* Width buttons */
+.sd-width-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+.sd-width-btn {
+  padding: 5px 4px;
+  font-size: 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-2);
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+  transition: all 0.15s;
+}
+.sd-width-btn.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+/* Profile check */
+.sd-profile-check {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+.sd-profile-check.active { background: var(--accent-light); }
+
+/* Option row */
+.sd-option-row {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.sd-option-row input {
+  padding: 5px 6px;
+  font-size: 11px;
+}
+.sd-option-row .code-input {
+  width: 44px;
+  flex: none;
+}
+
+/* ── Hidden fields ────────────────────────────────────────────────────────── */
+.sd-hidden-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 4px;
+  cursor: grab;
+  font-size: 11px;
+  user-select: none;
+}
+.sd-hidden-item:hover { border-color: var(--accent); }
+
+/* ── Palette ──────────────────────────────────────────────────────────────── */
+.sd-palette-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+
+.sd-palette-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: grab;
+  font-size: 11px;
+  user-select: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+.sd-palette-item:hover {
+  background: var(--bg-card);
+}
+.sd-palette-icon {
+  font-weight: 700;
+  font-size: 13px;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* ── Delete field btn ─────────────────────────────────────────────────────── */
+.sd-delete-field-btn {
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid #EF444444;
+  background: #EF444408;
+  color: var(--danger);
+  cursor: pointer;
+  width: 100%;
+  margin-top: 6px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+.sd-delete-field-btn:hover { background: #EF444418; }
+
+/* ── Remove btn in sidebar ────────────────────────────────────────────────── */
+.sd-remove-btn {
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 2px;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+.sd-remove-btn:hover { opacity: 1; }
+
+/* Add option button */
+.sd-add-option-btn {
+  font-size: 11px;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--border);
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+  width: 100%;
+  margin-top: 4px;
+  margin-bottom: 8px;
+  font-family: 'Poppins', sans-serif;
+  transition: border-color 0.15s;
+}
+.sd-add-option-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Fixed col badge */
+.sd-fixed-badge {
+  font-size: 8px;
+  background: var(--accent-light);
+  color: var(--accent);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-weight: 700;
+  margin-right: 2px;
+}

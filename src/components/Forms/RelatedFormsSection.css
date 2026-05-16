@@ -1,0 +1,147 @@
+.related-forms-section {
+  padding: 8px 0;
+}
+
+.related-forms-loading,
+.related-forms-error {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-3);
+  font-size: 13px;
+}
+.related-forms-error { color: var(--danger); }
+
+.related-forms-success {
+  background: var(--success, #22c55e);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.related-forms-subtitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin: 0 0 10px;
+}
+
+/* Available forms grid */
+.related-forms-available { margin-bottom: 20px; }
+.related-forms-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.related-form-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+  cursor: pointer;
+  text-align: right;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text-1);
+  transition: border-color 0.15s, background 0.15s;
+}
+.related-form-card:hover { border-color: var(--accent); background: var(--accent-light, #eff6ff); }
+.related-form-card:disabled { opacity: 0.5; cursor: wait; }
+.related-form-icon { font-size: 18px; flex-shrink: 0; }
+.related-form-name { flex: 1; font-weight: 600; }
+.related-form-arrow { color: var(--accent); font-weight: 700; }
+
+/* Empty state */
+.related-forms-empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--text-3);
+  font-size: 13px;
+}
+.related-forms-empty p { margin: 0 0 10px; }
+
+/* Submissions list */
+.related-forms-submissions { margin-top: 4px; }
+.related-submissions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.related-submission-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+.related-sub-name {
+  flex: 1;
+  font-weight: 600;
+  color: var(--text-1);
+  min-width: 120px;
+}
+.related-sub-date {
+  color: var(--text-2);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.sub-status-badge {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Modal overlay for form fill */
+.related-form-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 2000;
+  padding: 40px 16px;
+  overflow-y: auto;
+}
+.related-form-modal {
+  background: var(--bg-card);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 680px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.18);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 80px);
+  overflow: hidden;
+}
+.related-form-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.related-form-modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+.related-form-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}

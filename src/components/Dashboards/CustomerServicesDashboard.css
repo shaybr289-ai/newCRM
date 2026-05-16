@@ -1,0 +1,176 @@
+.csd-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.csd-picker {
+  padding: 14px 16px;
+}
+
+.csd-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-3);
+  font-size: 14px;
+}
+
+/* Top stats row */
+.csd-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.csd-stat {
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  text-align: center;
+}
+
+.csd-stat-value {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.csd-stat-label {
+  font-size: 12px;
+  color: var(--text-3);
+  margin-top: 6px;
+}
+
+/* Categories */
+.csd-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.csd-cat {
+  padding: 0;
+  overflow: hidden;
+}
+
+.csd-cat-head {
+  background: linear-gradient(135deg, #FFF7ED 0%, #FED7AA22 100%);
+  border-bottom: 1.5px solid #F59E0B33;
+  padding: 14px 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.csd-cat-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.csd-cat-totals {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.csd-num {
+  background: #F59E0B22;
+  color: #92400E;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.csd-pill {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.csd-pill-blue {
+  background: #DBEAFE;
+  border-color: #93C5FD;
+  color: #1E3A8A;
+}
+
+.csd-pill-green {
+  background: #D1FAE5;
+  border-color: #86EFAC;
+  color: #065F46;
+}
+
+/* Family rows */
+.csd-fam-list {
+  background: var(--bg-card);
+}
+
+.csd-fam-row {
+  display: grid;
+  grid-template-columns: 1fr 90px 130px 130px;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 13px;
+  align-items: center;
+}
+
+.csd-fam-row:last-child {
+  border-bottom: none;
+}
+
+.csd-fam-head {
+  background: var(--bg-page);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 16px;
+}
+
+.csd-fam-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.csd-tree-marker {
+  color: var(--text-3);
+  font-size: 12px;
+  flex-shrink: 0;
+  width: 14px;
+  text-align: center;
+}
+
+.csd-fam-meta {
+  color: var(--text-3);
+  font-size: 11px;
+  margin-right: 6px;
+}
+
+.csd-fam-cell {
+  text-align: center;
+  font-weight: 600;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.csd-fam-cell:nth-child(3) {
+  color: #1E40AF;
+}
+
+.csd-fam-cell:nth-child(4) {
+  color: #047857;
+}

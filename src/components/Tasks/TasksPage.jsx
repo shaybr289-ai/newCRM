@@ -72,15 +72,16 @@ function getPeriodRange(period, customFrom, customTo) {
 }
 
 const TASKS_COLUMNS = [
-  { key: 'task_num',    label: 'מספר',       section: 'כללי', defaultVisible: true },
-  { key: 'subject',     label: 'נושא',        section: 'כללי', defaultVisible: true },
-  { key: 'customer',    label: 'לקוח',        section: 'כללי', defaultVisible: true },
-  { key: 'assignees',   label: 'משויך ל',     section: 'כללי', defaultVisible: true },
-  { key: 'start_time',  label: 'שעת התחלה',  section: 'תאריכים', defaultVisible: true },
-  { key: 'due_date',    label: 'תאריך יעד',  section: 'תאריכים', defaultVisible: true },
-  { key: 'status',      label: 'סטטוס',       section: 'כללי', defaultVisible: true },
-  { key: 'created_at',  label: 'נוצר',        section: 'תאריכים', defaultVisible: false },
-  { key: 'description', label: 'תיאור',       section: 'כללי', defaultVisible: false },
+  { key: 'task_num',       label: 'מספר',       section: 'כללי',     defaultVisible: true,  sortable: true,  sortField: 'task_num'         },
+  { key: 'subject',        label: 'נושא',        section: 'כללי',     defaultVisible: true,  sortable: true,  sortField: 'subject'           },
+  { key: 'customer',       label: 'לקוח',        section: 'כללי',     defaultVisible: true,  sortable: true,  sortField: '_customer_name'    },
+  { key: 'assignees',      label: 'משויך ל',     section: 'כללי',     defaultVisible: true,  sortable: true,  sortField: '_assignees_label'  },
+  { key: 'start_time',     label: 'שעת התחלה',  section: 'תאריכים', defaultVisible: true,  sortable: true,  sortField: 'start_time'        },
+  { key: 'due_date',       label: 'תאריך יעד',  section: 'תאריכים', defaultVisible: true,  sortable: true,  sortField: 'due_date'          },
+  { key: 'status',         label: 'סטטוס',       section: 'כללי',     defaultVisible: true,  sortable: true,  sortField: 'status'            },
+  { key: 'created_at',     label: 'נוצר',        section: 'תאריכים', defaultVisible: false, sortable: true,  sortField: 'created_at'        },
+  { key: 'description',    label: 'תיאור',       section: 'כללי',     defaultVisible: false, sortable: false                                  },
+  { key: '_delete_action', label: 'מחיקה',       section: 'כללי',     defaultVisible: true,  sortable: false                                  },
 ];
 
 export default function TasksPage() {
@@ -91,6 +92,9 @@ export default function TasksPage() {
   const [confirmDel, setConfirmDel] = useState(null);
   const [search, setSearch] = useState('');
   const [showSettings, setShowSettings] = useState(false);
+  const [displayLimit, setDisplayLimit] = useState(() =>
+    parseInt(localStorage.getItem('tasks_display_limit') || '25', 10)
+  );
 
   // Dynamic status definitions fetched from server
   const [statusDefs, setStatusDefs] = useState(TASK_STATUSES_MAP);
@@ -115,10 +119,12 @@ export default function TasksPage() {
   const [period, setPeriod]             = useState('month');
   const [customFrom, setCustomFrom]     = useState('');
   const [customTo, setCustomTo]         = useState('');
+  const [groupFilter, setGroupFilter]   = useState('all');
   const [empFilter, setEmpFilter]       = useState([]);
   const [empPickerOpen, setEmpPickerOpen] = useState(false);
   const [empSearch, setEmpSearch]       = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [customerFilter, setCustomerFilter] = useState('');
 
   const range = useMemo(() => getPeriodRange(period, customFrom, customTo), [period, customFrom, customTo]);
 
@@ -135,15 +141,35 @@ export default function TasksPage() {
   const users       = usersData?.data  || [];
   const customers   = custData?.data   || [];
 
-  // Client-side filters
+  const departments = useMemo(() => {
+    const set = new Set(users.map(u => u.department).filter(Boolean));
+    return [...set].sort();
+  }, [users]);
+
+  // Client-side filters + enrich with resolved names for sorting
   const tasks = useMemo(() => {
     let t = allTasks;
+    if (groupFilter !== 'all') {
+      const groupIds = new Set(users.filter(u => (u.department || '') === groupFilter).map(u => u.id));
+      t = t.filter(task => (task.assignee_ids || []).some(uid => groupIds.has(uid)));
+    }
     if (empFilter.length > 0)
       t = t.filter(task => (task.assignee_ids || []).some(uid => empFilter.includes(uid)));
     if (statusFilter !== 'all')
       t = t.filter(task => task.status === statusFilter);
-    return t;
-  }, [allTasks, empFilter, statusFilter]);
+    if (customerFilter)
+      t = t.filter(task => String(task.customer_id) === String(customerFilter));
+    // Enrich each task with resolved customer name and assignees label so
+    // DataTable can sort those columns client-side via sortField
+    return t.map(task => ({
+      ...task,
+      _customer_name:   task.customer_id ? (customers.find(c => c.id === task.customer_id)?.company_name || '') : '',
+      _assignees_label: (task.assignee_ids || []).map(uid => {
+        const u = users.find(x => x.id === uid);
+        return u ? `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username || '' : '';
+      }).filter(Boolean).join(', '),
+    }));
+  }, [allTasks, empFilter, statusFilter, customerFilter, customers, users]);
 
   // Open task editor from URL (?edit=<id>)
   useEffect(() => {
@@ -227,6 +253,22 @@ export default function TasksPage() {
       );
       case 'created_at':  return <span style={{ fontSize: 11, color: FO.TEXT_MUTED }}>{new Date(t.created_at).toLocaleDateString('he-IL')}</span>;
       case 'description': return <span style={{ fontSize: 12, color: FO.TEXT_MUTED, maxWidth: 240, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.description || '—'}</span>;
+      case '_delete_action': return (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setConfirmDel(t); }}
+          style={{
+            padding: '5px 12px', borderRadius: 7,
+            border: '1.5px solid #EF4444', background: '#FFF5F5',
+            color: '#DC2626', fontSize: 12, fontWeight: 700,
+            cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <i className="ti ti-trash" aria-hidden="true" style={{ fontSize: 13 }} />
+          מחק
+        </button>
+      );
       default: return null;
     }
   };
@@ -235,7 +277,14 @@ export default function TasksPage() {
     <div className="tdb-page">
 
       {showSettings && (
-        <TaskStatusSettings onClose={() => { setShowSettings(false); loadStatuses(); }} onSaved={loadStatuses} />
+        <TaskStatusSettings
+          onClose={() => {
+            setShowSettings(false);
+            loadStatuses();
+            setDisplayLimit(parseInt(localStorage.getItem('tasks_display_limit') || '25', 10));
+          }}
+          onSaved={loadStatuses}
+        />
       )}
 
       {/* Top Bar */}
@@ -269,6 +318,17 @@ export default function TasksPage() {
 
       {/* Toolbar — identical to dashboard */}
       <div className="tdb-toolbar">
+
+        {/* Group filter */}
+        {departments.length > 0 && (
+          <div className="tdb-filter-group">
+            <label className="tdb-filter-label">קבוצה:</label>
+            <select className="tdb-select" value={groupFilter} onChange={e => { setGroupFilter(e.target.value); setEmpFilter([]); }}>
+              <option value="all">כל הקבוצות</option>
+              {departments.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </div>
+        )}
 
         {/* Employee picker */}
         <div className="tdb-filter-group" style={{ position: 'relative' }}>
@@ -376,19 +436,20 @@ export default function TasksPage() {
 
       {/* Data Table */}
       <DataTable
-        title="רשימת משימות"
         columns={TASKS_COLUMNS}
         data={tasks}
         total={tasks.length}
         isLoading={isLoading}
         search={search}
         onSearchChange={setSearch}
-        onAdd={() => setEditItem({ subject: '', description: '', notes: '', customer_id: '', due_date: '', start_time: '', status: 'new', assignee_ids: [], contact_ids: [] })}
         onEdit={setEditItem}
-        onDelete={setConfirmDel}
         renderCell={renderCell}
         storageKey="tasks_visible_cols"
-        addLabel="+ משימה חדשה"
+        defaultSort={{ key: 'task_num', dir: 'desc' }}
+        displayLimit={displayLimit}
+        hideHeader
+        customers={customers}
+        onCustomerFilterChange={id => setCustomerFilter(id)}
       />
     </div>
   );

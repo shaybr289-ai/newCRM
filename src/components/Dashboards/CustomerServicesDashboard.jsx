@@ -232,7 +232,7 @@ export default function CustomerServicesDashboard({ customerId: customerIdProp }
                     transition: 'all 0.15s',
                   }}
                 >
-                  {on ? '✓ ' : ''}{label}
+                  {on ? <><i className="ti ti-check" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 2 }} /> </> : ''}{label}
                 </button>
               );
             })}
@@ -242,7 +242,7 @@ export default function CustomerServicesDashboard({ customerId: customerIdProp }
 
       {!customerId && !customerIdProp && (
         <div className="card csd-empty">
-          <span style={{ fontSize: 40, display: 'block', marginBottom: 8 }}>👆</span>
+          <i className="ti ti-hand-finger" aria-hidden="true" style={{ fontSize: 40, display: 'block', marginBottom: 8 }} />
           בחר לקוח כדי לצפות בדשבורד השירותים שלו
         </div>
       )}
@@ -303,12 +303,12 @@ function CategoryCard({ cat, fmtMoney, labelForDepth, families }) {
     <div className="csd-cat card">
       <div className="csd-cat-head">
         <div className="csd-cat-title">
-          <span style={{ fontSize: 18 }}>🗂</span>
+          <i className="ti ti-folder" aria-hidden="true" style={{ fontSize: 18 }} />
           {cat.num && <bdi className="csd-num">{cat.num}</bdi>}
           <bdi style={{ fontSize: 16, fontWeight: 700 }}>{cat.name}</bdi>
         </div>
         <div className="csd-cat-totals">
-          <span className="csd-pill">📦 {cat.total.count} שירותים</span>
+          <span className="csd-pill"><i className="ti ti-package" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 2 }} /> {cat.total.count} שירותים</span>
           {cat.total.onetime > 0 && <span className="csd-pill csd-pill-blue">חד"פ {fmtMoney(cat.total.onetime)}</span>}
           {cat.total.recurring > 0 && <span className="csd-pill csd-pill-green">חודשי {fmtMoney(cat.total.recurring)}</span>}
         </div>
