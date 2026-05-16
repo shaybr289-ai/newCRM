@@ -139,7 +139,7 @@ export default function ContactsPage() {
           <div className="form-field"><label>אי-מייל</label><input value={editItem.email || ''} onChange={e => upd('email', e.target.value)} dir="ltr" type="email" /></div>
           <div className="form-field"><label>נייד</label><input value={editItem.mobile || ''} onChange={e => upd('mobile', e.target.value)} dir="ltr" type="tel" /></div>
           <div className="form-field"><label>תאריך לידה</label><input value={editItem.birth_date || ''} onChange={e => upd('birth_date', e.target.value)} type="date" dir="ltr" /></div>
-          <OwnerSelect value={editItem.created_by} onChange={v => upd('created_by', v)} />
+          <OwnerSelect value={editItem.created_by} onChange={v => upd('created_by', v)} label="בעלי רשומה איש קשר" />
         </div>
         <div style={{ display: 'flex', gap: 20, marginTop: 16 }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>

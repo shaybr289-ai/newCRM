@@ -230,7 +230,7 @@ export default function ServiceAgreementsPage() {
 
               <h3 className="form-section-title">פרטים נוספים</h3>
               <div className="form-grid">
-                <OwnerSelect value={editItem.owner_id} onChange={v => upd('owner_id', v)} />
+                <OwnerSelect value={editItem.owner_id} onChange={v => upd('owner_id', v)} label="בעלי רשומה הסכם שירות" />
                 <div className="form-field">
                   <label>מספר CRM חיצוני</label>
                   <input value={editItem.crm_customer_num || ''} onChange={e => upd('crm_customer_num', e.target.value)} dir="ltr" />

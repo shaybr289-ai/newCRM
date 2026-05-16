@@ -80,7 +80,7 @@ export default function CustomerModal({ customer, onSave, onClose, loading, back
               {STATUS_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
-          <OwnerSelect value={form.owner_id} onChange={v => upd('owner_id', v)} />
+          <OwnerSelect value={form.owner_id} onChange={v => upd('owner_id', v)} label="בעלי רשומה לקוח" />
         </div>
 
         <div className="form-field" style={{ marginTop: 12 }}><label>הערות</label><textarea value={form.notes || ''} onChange={e => upd('notes', e.target.value)} rows={3} /></div>

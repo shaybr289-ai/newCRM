@@ -21,4 +21,5 @@ export const MODULES = [
   { id: 'forms',             label: 'טפסים דיגיטליים',     icon: 'forms',             path: '/forms',              color: '#2563EB' },
   { id: 'attendance',        label: 'נוכחות',              icon: 'attendance',        path: '/attendance',         color: '#0D9488' },
   { id: 'taskreport',        label: 'דוח דיווחי משימות',   icon: 'reports',           path: '/tasks/submissions-report', color: '#0EA5E9' },
+  { id: 'bulkupdate',        label: 'עדכון המוני',          icon: 'datamanagement',    path: '/bulk-update',              color: '#0891B2' },
 ];

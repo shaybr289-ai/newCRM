@@ -35,6 +35,7 @@ import SubmissionsPage from './components/Forms/SubmissionsPage';
 import PublicFormPage from './components/Forms/PublicFormPage';
 import AttendancePage from './components/Attendance/AttendancePage';
 import TaskSubmissionsReport from './components/Reports/TaskSubmissionsReport';
+import BulkUpdatePage from './pages/BulkUpdatePage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -125,6 +126,7 @@ export default function App() {
             <Route path="forms/:id/submissions" element={<SubmissionsPage />} />
             <Route path="attendance" element={<AttendancePage />} />
             <Route path="tasks/submissions-report" element={<TaskSubmissionsReport />} />
+            <Route path="bulk-update" element={<BulkUpdatePage />} />
           </Route>
 
           {/* Form Builder — full-screen, NO MainLayout sidebar */}

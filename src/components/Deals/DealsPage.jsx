@@ -235,7 +235,7 @@ export default function DealsPage() {
                 {DEAL_PRIORITIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             </div>
-            <OwnerSelect value={editItem.owner} onChange={v => upd('owner', v)} label="בעל עסקה" />
+            <OwnerSelect value={editItem.owner} onChange={v => upd('owner', v)} label="בעלי רשומה עסקה" />
           </div>
 
           {isLost && (

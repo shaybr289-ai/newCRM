@@ -238,7 +238,7 @@ export default function CustomerDetailPage() {
                 <option value="inactive">לא פעיל</option>
               </select>
             </div>
-            <OwnerSelect value={editContact.created_by} onChange={v => upd('created_by', v)} />
+            <OwnerSelect value={editContact.created_by} onChange={v => upd('created_by', v)} label="בעלי רשומה איש קשר" />
           </div>
 
           <h3 className="form-section-title">פרטי התקשרות</h3>
@@ -513,7 +513,7 @@ export default function CustomerDetailPage() {
                     <option value="inactive">לא פעיל</option>
                   </select>
                 </div>
-                <OwnerSelect value={editContact.created_by} onChange={v=>setEditContact(p=>({...p,created_by:v}))} />
+                <OwnerSelect value={editContact.created_by} onChange={v=>setEditContact(p=>({...p,created_by:v}))} label="בעלי רשומה איש קשר" />
               </div>
               <div style={{ display: 'flex', gap: 20, marginTop: 12 }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
@@ -558,7 +558,7 @@ export default function CustomerDetailPage() {
                     <option value="inactive">לא פעיל</option>
                   </select>
                 </div>
-                <OwnerSelect value={editSite.site_owner_id} onChange={v=>setEditSite(p=>({...p,site_owner_id:v}))} label="בעלי אתר" />
+                <OwnerSelect value={editSite.site_owner_id} onChange={v=>setEditSite(p=>({...p,site_owner_id:v}))} label="בעלי רשומה אתר" />
               </div>
               <h3 className="form-section-title">מיקום גאוגרפי</h3>
               <div className="form-grid">
@@ -687,7 +687,7 @@ export default function CustomerDetailPage() {
 
               <h3 className="form-section-title">פרטים נוספים</h3>
               <div className="form-grid">
-                <OwnerSelect value={editAgreement.owner_id} onChange={v => setEditAgreement(p => ({ ...p, owner_id: v }))} />
+                <OwnerSelect value={editAgreement.owner_id} onChange={v => setEditAgreement(p => ({ ...p, owner_id: v }))} label="בעלי רשומה הסכם שירות" />
                 <div className="form-field">
                   <label>מספר CRM חיצוני</label>
                   <input value={editAgreement.crm_customer_num || ''} onChange={e => setEditAgreement(p => ({ ...p, crm_customer_num: e.target.value }))} dir="ltr" />

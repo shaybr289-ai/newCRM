@@ -125,7 +125,7 @@ export default function SitesPage() {
               {STATUS_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
-          <OwnerSelect value={editItem.site_owner_id} onChange={v => upd('site_owner_id', v)} label="בעלי אתר" />
+          <OwnerSelect value={editItem.site_owner_id} onChange={v => upd('site_owner_id', v)} label="בעלי רשומה אתר" />
         </div>
         <h3 className="form-section-title">מיקום גאוגרפי</h3>
         <div className="form-grid">

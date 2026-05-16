@@ -386,7 +386,7 @@ export default function QuoteEditor() {
                       <input type="number" value={form.overall_discount || ''} onChange={e => upd('overall_discount', e.target.value)} dir="ltr" min="0" max="100" />
                     </div>);
                   case 'owner': return (
-                    <OwnerSelect key={fieldId} value={form.created_by} onChange={v => upd('created_by', v)} label={label('owner', 'בעלים')} />
+                    <OwnerSelect key={fieldId} value={form.created_by} onChange={v => upd('created_by', v)} label={label('owner', 'בעלי רשומה הצעת מחיר')} />
                   );
                   default:
                     // Custom fields added via Screen Designer

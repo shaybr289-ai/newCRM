@@ -218,6 +218,7 @@ export default function CustItemsPage() {
                     {custSites.map(s => <option key={s.id} value={s.id}>{s.site_name}</option>)}
                   </select>
                 </div>
+                <OwnerSelect value={editItem.created_by} onChange={v => upd('created_by', v)} label="בעלי רשומה פריט לקוח" />
               </div>
 
               {/* שם פריט — שורה שלמה */}

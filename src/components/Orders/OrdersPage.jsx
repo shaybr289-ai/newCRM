@@ -12,7 +12,9 @@ import { ORDERS_COLUMNS, EMPTY_ORDER, ORDER_STATUSES, ORDER_STATUS_COLORS, DELIV
 import { Icon, ICONS } from '../../utils/icons';
 import DataTable from '../Layout/DataTable';
 import ModuleTopbar from '../Layout/ModuleTopbar';
+import OwnerSelect from '../Layout/OwnerSelect';
 import StatsBar from '../Layout/StatsBar';
+import SendOrderModal from './SendOrderModal';
 import '../Layout/EditorPage.css';
 import '../Customers/CustomerModal.css';
 
@@ -25,6 +27,7 @@ export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [editItem, setEditItem] = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
+  const [showSendEmail, setShowSendEmail] = useState(false);
 
   const { data, isLoading, error } = useOrders({ page, limit: 50, search, customerId: customerFilter });
   const { data: custData } = useCustomers({ limit: 500 });
@@ -229,6 +232,11 @@ export default function OrdersPage() {
               </button>
             )}
             {editItem.id && (
+              <button className="tdb-calendar-btn" onClick={() => setShowSendEmail(true)} disabled={!editItem.customer_id}>
+                <i className="ti ti-mail" aria-hidden="true" /> שלח במייל
+              </button>
+            )}
+            {editItem.id && (
               <button className="tdb-calendar-btn"
                 disabled={createDNMut.isPending || (items || []).length === 0}
                 title={(items || []).length === 0 ? 'לא ניתן להפיק תעודת משלוח — יש להוסיף לפחות פריט אחד להזמנה' : ''}
@@ -293,6 +301,7 @@ export default function OrdersPage() {
                 {ORDER_STATUSES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             </div>
+            <OwnerSelect value={editItem.created_by} onChange={v => upd('created_by', v)} label="בעלי רשומה הזמנה" />
           </div>
 
           <h3 className="form-section-title">פרטי משלוח / אספקה</h3>
@@ -454,6 +463,17 @@ export default function OrdersPage() {
         onEdit={row => setEditItem({ ...row })} onDelete={row => setConfirmDel(row)}
         renderCell={renderCell} storageKey="biz_orders_cols_v1" hideHeader
         customers={customers} onCustomerFilterChange={id => { setCustomerFilter(id); setPage(1); }} />
+      {showSendEmail && editItem && (
+        <SendOrderModal
+          order={editItem}
+          items={items}
+          customer={customers.find(c => c.id === editItem.customer_id)}
+          contact={allContacts.find(c => c.id === editItem.contact_id)}
+          onClose={() => setShowSendEmail(false)}
+          onSent={() => setShowSendEmail(false)}
+        />
+      )}
+
       {confirmDel && (
         <div className="modal-overlay" onClick={() => setConfirmDel(null)}>
           <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 400, padding: 24 }}>

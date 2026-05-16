@@ -25,7 +25,7 @@ export const SCREEN_REGISTRY = {
           { id: 'validUntil', label: 'תוקף עד', type: 'date' },
           { id: 'dealName', label: 'שם / מספר עסקה', type: 'text' },
           { id: 'overallDiscount', label: 'הנחה כללית (%)', type: 'number' },
-          { id: 'owner', label: 'בעלים', type: 'custom' },
+          { id: 'owner', label: 'בעלי רשומה הצעת מחיר', type: 'custom' },
         ],
       },
       {
