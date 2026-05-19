@@ -51,10 +51,12 @@ const ACTION_LABELS = { view: 'צפייה', create: 'יצירה', edit: 'ערי�
 // in the profile permissions editor. (DB Debug is intentionally NOT here —
 // it's hard-gated to superAdmin only on the mobile side.)
 const MOBILE_MODULES = [
-  { id: 'tasks',      label: 'משימות',  icon: 'ti-checkbox' },
-  { id: 'attendance', label: 'נוכחות',  icon: 'ti-clock'    },
-  { id: 'forms',      label: 'טפסים',   icon: 'ti-forms'    },
-  { id: 'customers',  label: 'לקוחות',  icon: 'ti-users'    },
+  { id: 'tasks',      label: 'משימות',        icon: 'ti-checkbox',        canEdit: true  },
+  { id: 'attendance', label: 'נוכחות',        icon: 'ti-clock',           canEdit: false },
+  { id: 'forms',      label: 'טפסים',         icon: 'ti-forms',           canEdit: true  },
+  { id: 'customers',  label: 'לקוחות',        icon: 'ti-users',           canEdit: false },
+  { id: 'quotes',     label: 'הצעות מחיר',    icon: 'ti-file-invoice',    canEdit: false },
+  { id: 'deals',      label: 'עסקאות',        icon: 'ti-briefcase',       canEdit: false },
 ];
 
 const USER_TYPES = [['user', 'משתמש'], ['superAdmin', 'סופר אדמין']];
@@ -543,19 +545,44 @@ function ProfilePermsTab() {
 
   const startEdit = (p) => {
     setSelectedId(p.id);
+    // Build mobilePerms: prefer explicit mobile_perms from DB,
+    // fall back to deriving view=true for each module in mobile_modules array.
+    let mobilePerms = {};
+    if (p.mobile_perms && typeof p.mobile_perms === 'object' && Object.keys(p.mobile_perms).length > 0) {
+      mobilePerms = JSON.parse(JSON.stringify(p.mobile_perms));
+    } else {
+      const legacyVisible = new Set(
+        Array.isArray(p.mobile_modules) ? p.mobile_modules : ['tasks', 'attendance', 'forms', 'customers']
+      );
+      MOBILE_MODULES.forEach(m => {
+        mobilePerms[m.id] = { view: legacyVisible.has(m.id), edit: false };
+      });
+    }
     setDraft({
       modulePerms: JSON.parse(JSON.stringify(p.module_perms || {})),
       toolPerms: JSON.parse(JSON.stringify(p.tool_perms || {})),
-      mobileModules: Array.isArray(p.mobile_modules)
-        ? [...p.mobile_modules]
-        : ['tasks', 'attendance', 'forms', 'customers'], // sensible default for legacy profiles
+      mobilePerms,
     });
   };
 
-  const toggleMobileModule = (modId, enabled) => setDraft(d => {
-    const current = new Set(d.mobileModules || []);
-    if (enabled) current.add(modId); else current.delete(modId);
-    return { ...d, mobileModules: Array.from(current) };
+  const setMobilePerm = (modId, action, val) => setDraft(d => ({
+    ...d,
+    mobilePerms: {
+      ...d.mobilePerms,
+      [modId]: { ...(d.mobilePerms[modId] || {}), [action]: val },
+    },
+  }));
+
+  // "View all / Edit all" header toggles
+  const isMobileColChecked = (action) =>
+    draft && MOBILE_MODULES.every(m => !!(draft.mobilePerms?.[m.id]?.[action]));
+  const toggleMobileCol = (action, val) => setDraft(d => {
+    const next = { ...d.mobilePerms };
+    MOBILE_MODULES.forEach(m => {
+      if (action === 'edit' && !m.canEdit) return; // skip non-editable modules for edit column
+      next[m.id] = { ...(next[m.id] || {}), [action]: val };
+    });
+    return { ...d, mobilePerms: next };
   });
 
   const modulesForMatrix = MODULES.filter(m => m.id !== 'users');
@@ -597,7 +624,7 @@ function ProfilePermsTab() {
         description: selected.description,
         modulePerms: draft.modulePerms,
         toolPerms: draft.toolPerms,
-        mobileModules: draft.mobileModules || [],
+        mobilePerms: draft.mobilePerms || {},
       });
       alert('הרשאות נשמרו');
     } catch (err) { alert(err.message || 'שגיאה בשמירה'); }
@@ -713,37 +740,78 @@ function ProfilePermsTab() {
               ))}
             </div>
 
-            {/* Mobile app modules visibility ─────────────────────────────── */}
+            {/* Mobile app permissions matrix ───────────────────────────── */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, marginBottom: 10 }}>
               <h4 className="form-section-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <i className="ti ti-device-mobile" aria-hidden="true" style={{ fontSize: 16, color: '#0A5E9A' }} />
-                אפליקציה ניידת — מודולים מוצגים
+                אפליקציה ניידת — הרשאות מודולים
               </h4>
-              <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                כיבוי = לא יוצג כלל באפליקציית הטלפון
-              </span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
-              {MOBILE_MODULES.map(m => {
-                const enabled = (draft.mobileModules || []).includes(m.id);
-                return (
-                  <div
-                    key={m.id}
-                    className={`up-mobile-card${enabled ? ' up-mobile-card--on' : ''}`}
-                  >
-                    <i className={`ti ${m.icon}`} aria-hidden="true" style={{ fontSize: 20, color: '#0A5E9A' }} />
-                    <span className="up-mobile-label">{m.label}</span>
-                    <ToggleSwitch
-                      checked={enabled}
-                      onChange={e => toggleMobileModule(m.id, e.target.checked)}
-                    />
-                  </div>
-                );
-              })}
+            <div style={{ overflowX: 'auto' }}>
+              <table className="up-perms-table">
+                <thead>
+                  <tr>
+                    <th className="up-perms-th-module">מודול</th>
+                    <th className="up-perms-th-action">
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                        <span>צפייה</span>
+                        <ToggleSwitch
+                          checked={isMobileColChecked('view')}
+                          onChange={e => toggleMobileCol('view', e.target.checked)}
+                          title="סמן/בטל הכל בעמודת צפייה"
+                        />
+                      </div>
+                    </th>
+                    <th className="up-perms-th-action">
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                        <span>עריכה</span>
+                        <ToggleSwitch
+                          checked={isMobileColChecked('edit')}
+                          onChange={e => toggleMobileCol('edit', e.target.checked)}
+                          title="סמן/בטל הכל בעמודת עריכה"
+                        />
+                      </div>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {MOBILE_MODULES.map(m => {
+                    const perms = draft.mobilePerms?.[m.id] || {};
+                    return (
+                      <tr key={m.id} className="up-perms-row">
+                        <td className="up-perms-td-module">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <i className={`ti ${m.icon}`} aria-hidden="true" style={{ fontSize: 15, color: '#0A5E9A', flexShrink: 0 }} />
+                            {m.label}
+                          </div>
+                        </td>
+                        <td className="up-perms-td-action">
+                          <ToggleSwitch
+                            checked={!!perms.view}
+                            onChange={e => setMobilePerm(m.id, 'view', e.target.checked)}
+                          />
+                        </td>
+                        <td className="up-perms-td-action">
+                          {m.canEdit ? (
+                            <ToggleSwitch
+                              checked={!!perms.edit}
+                              onChange={e => setMobilePerm(m.id, 'edit', e.target.checked)}
+                              disabled={!perms.view}
+                              title={!perms.view ? 'יש להפעיל צפייה תחילה' : ''}
+                            />
+                          ) : (
+                            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
             <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 8 }}>
               <i className="ti ti-info-circle" aria-hidden="true" style={{ fontSize: 13, verticalAlign: '-2px', marginLeft: 4 }} />
-              "מצב DB" באפליקציה גלוי רק לסופר אדמין באופן קבוע — לא ניתן להגדיר אותו דרך הפרופיל.
+              כיבוי "צפייה" = המודול לא יוצג כלל באפליקציה. "עריכה" — רלוונטי למשימות וטפסים בלבד. "מצב DB" גלוי רק לסופר אדמין באופן קבוע.
             </p>
           </>
         )}
