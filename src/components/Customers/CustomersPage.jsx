@@ -1,11 +1,13 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomers, useCreateCustomer, useUpdateCustomer, useDeleteCustomer } from '../../hooks/useCustomers';
+import { useUsers } from '../../hooks/useUsers';
 import { CUSTOMERS_COLUMNS, getClientTypeLabel } from '../../utils/constants';
 import { Icon, ICONS } from '../../utils/icons';
 import CustomerModal from './CustomerModal';
 import StatsBar from '../Layout/StatsBar';
 import ModuleTopbar from '../Layout/ModuleTopbar';
+import useAuthStore from '../../store/authStore';
 import './CustomersPage.css';
 
 const DEFAULT_VISIBLE = CUSTOMERS_COLUMNS.filter(c => c.defaultVisible).map(c => c.key);
@@ -19,6 +21,9 @@ const COL_SECTIONS = CUSTOMERS_COLUMNS.reduce((acc, col) => {
 }, {});
 
 export default function CustomersPage() {
+  const currentUser = useAuthStore((s) => s.user);
+  const { data: usersData } = useUsers();
+  const users = usersData?.data || [];
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -95,6 +100,11 @@ export default function CustomersPage() {
   const renderCellValue = (cust, key) => {
     switch (key) {
       case 'client_type': return getClientTypeLabel(cust.client_type);
+      case 'owner_id': {
+        if (!cust.owner_id) return '—';
+        const u = users.find(u => u.id === cust.owner_id);
+        return u ? (`${u.first_name || ''} ${u.last_name || ''}`).trim() || u.username || '—' : '—';
+      }
       case 'status':
         return (
           <span className={`badge ${cust.status === 'active' ? 'badge-success' : 'badge-danger'}`}>
@@ -135,7 +145,7 @@ export default function CustomersPage() {
   return (
     <div className="animate-in">
       <ModuleTopbar icon="ti-users" title="לקוחות">
-        <button className="tdb-calendar-btn" onClick={() => setEditCust({})} style={{ background: 'rgba(255,255,255,.25)', borderColor: 'rgba(255,255,255,.5)', fontWeight: 700 }}>
+        <button className="tdb-calendar-btn" onClick={() => setEditCust({ owner_id: currentUser?.id || '' })} style={{ background: 'rgba(255,255,255,.25)', borderColor: 'rgba(255,255,255,.5)', fontWeight: 700 }}>
           <i className="ti ti-plus" aria-hidden="true" /> לקוח חדש
         </button>
       </ModuleTopbar>

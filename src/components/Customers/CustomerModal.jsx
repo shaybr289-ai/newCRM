@@ -2,12 +2,16 @@ import { useState } from 'react';
 import { CLIENT_TYPES, CURRENCIES, PAYMENT_TERMS, STATUS_OPTIONS, EMPTY_CUSTOMER } from '../../utils/constants';
 import { Icon, ICONS } from '../../utils/icons';
 import OwnerSelect from '../Layout/OwnerSelect';
+import useAuthStore from '../../store/authStore';
 import '../Layout/EditorPage.css';
 import '../Tasks/TasksDashboard.css';
 import './CustomerModal.css';
 
 export default function CustomerModal({ customer, onSave, onClose, loading, backLabel }) {
-  const [form, setForm] = useState(customer || { ...EMPTY_CUSTOMER });
+  const currentUser = useAuthStore((s) => s.user);
+  // When creating (no existing customer), pre-fill owner_id with current user
+  const initial = customer || { ...EMPTY_CUSTOMER, owner_id: currentUser?.id || '' };
+  const [form, setForm] = useState(initial);
   const upd = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
   const handleSubmit = (e) => {
