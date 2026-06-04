@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTasks } from '../../hooks/useTasks';
 import { useUsers } from '../../hooks/useUsers';
 import { useCustomers } from '../../hooks/useCustomers';
+import { usePerms } from '../../hooks/usePerms';
 import { api } from '../../api/client';
 import './TasksDashboard.css';
 
@@ -72,7 +73,7 @@ function getPeriodRange(period, customFrom, customTo) {
 }
 
 // ── Employee Drawer ────────────────────────────────────────────────────────────
-function EmployeeDrawer({ employee, tasks, onClose, custName, statusDefs }) {
+function EmployeeDrawer({ employee, tasks, onClose, custName, statusDefs, canEdit }) {
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFrom, setDateFrom]         = useState('');
   const [dateTo, setDateTo]             = useState('');
@@ -164,7 +165,7 @@ function EmployeeDrawer({ employee, tasks, onClose, custName, statusDefs }) {
         <div className="tdb-drawer-list">
           {list.length > 0 && (
             <div className="tdb-drawer-hint">
-              מוצגות {list.length} מתוך {tasks.length} משימות — לחץ לעריכה
+              מוצגות {list.length} מתוך {tasks.length} משימות — לחץ {canEdit ? 'לעריכה' : 'לצפייה'}
             </div>
           )}
           {list.length === 0 ? (
@@ -180,8 +181,8 @@ function EmployeeDrawer({ employee, tasks, onClose, custName, statusDefs }) {
               <div
                 key={t.id}
                 className="tdb-drawer-task"
-                onClick={() => { onClose(); navigate(`/tasks?edit=${t.id}`); }}
-                title="לחץ לעריכת המשימה"
+                onClick={() => { onClose(); navigate(canEdit ? `/tasks?edit=${t.id}` : `/tasks?edit=${t.id}&viewOnly=1`); }}
+                title={canEdit ? 'לחץ לעריכת המשימה' : 'לחץ לצפייה במשימה'}
               >
                 <span className="tdb-drawer-dot" style={{ background: statusColor }} />
                 <div className="tdb-drawer-task-body">
@@ -195,7 +196,9 @@ function EmployeeDrawer({ employee, tasks, onClose, custName, statusDefs }) {
                 <span className="tdb-badge" style={{ background: statusBg, color: statusText }}>
                   {statusLabel}
                 </span>
-                <span style={{ fontSize: 14, opacity: .45, marginRight: 4 }}><i className="ti ti-edit" aria-hidden="true" /></span>
+                <span style={{ fontSize: 14, opacity: .45, marginRight: 4 }}>
+                  <i className={`ti ${canEdit ? 'ti-edit' : 'ti-eye'}`} aria-hidden="true" />
+                </span>
               </div>
             );
           })}
@@ -739,6 +742,7 @@ function EmployeeCard({ employee, tasks, onClick }) {
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function TasksDashboard() {
   const navigate = useNavigate();
+  const { canEdit: canEditTasks } = usePerms('tasks');
   const [period, setPeriod]         = useState('month');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo]     = useState('');
@@ -1069,6 +1073,7 @@ export default function TasksDashboard() {
           onClose={() => setDrawerEmp(null)}
           custName={custName}
           statusDefs={statusDefs}
+          canEdit={canEditTasks}
         />
       )}
 

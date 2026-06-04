@@ -5,6 +5,7 @@ import {
   usePublishForm, useArchiveForm, useDeleteForm,
 } from '../../hooks/useForms';
 import ModuleTopbar from '../Layout/ModuleTopbar';
+import { usePerms } from '../../hooks/usePerms';
 import './FormsPage.css';
 
 // ─── Status config ────────────────────────────────────────────────────────────
@@ -56,7 +57,7 @@ function KpiStrip({ forms }) {
   );
 }
 
-function FormCard({ form, onEdit, onSubmissions, onTogglePublish, onDuplicate, onDelete }) {
+function FormCard({ form, onEdit, onViewOnly, onSubmissions, onTogglePublish, onDuplicate, onDelete, canEdit, canDelete: canDel }) {
   const [hovered, setHovered] = useState(false);
   const isActive = form.status === 'active';
 
@@ -86,27 +87,28 @@ function FormCard({ form, onEdit, onSubmissions, onTogglePublish, onDuplicate, o
 
       {/* Actions */}
       <div className="fo-card-actions">
-        <button className="fo-btn fo-btn--primary" onClick={() => onEdit(form)}>
-          <IconEdit /> ערוך
-        </button>
+        {canEdit
+          ? <button className="fo-btn fo-btn--primary" onClick={() => onEdit(form)}><IconEdit /> ערוך</button>
+          : <button className="fo-btn fo-btn--secondary" onClick={() => onViewOnly(form)}><IconEdit /> צפייה</button>
+        }
         <button className="fo-btn fo-btn--secondary" onClick={() => onSubmissions(form)}>
           <IconSubmissions /> הגשות
         </button>
-        <button
-          className={`fo-btn ${isActive ? 'fo-btn--warn' : 'fo-btn--success'}`}
-          title={isActive ? 'השבת — יוסתר ממשתמשי המובייל' : 'הפעל — יסונכרן למובייל'}
-          onClick={() => onTogglePublish(form)}
-        >
-          {isActive ? <><IconPause /> השבת</> : <><IconPlay /> הפעל</>}
-        </button>
-        <div className="fo-card-icons">
-          <button className="fo-icon-btn" title="שכפל" onClick={() => onDuplicate(form)}>
-            <IconDuplicate />
+        {canEdit && (
+          <button
+            className={`fo-btn ${isActive ? 'fo-btn--warn' : 'fo-btn--success'}`}
+            title={isActive ? 'השבת — יוסתר ממשתמשי המובייל' : 'הפעל — יסונכרן למובייל'}
+            onClick={() => onTogglePublish(form)}
+          >
+            {isActive ? <><IconPause /> השבת</> : <><IconPlay /> הפעל</>}
           </button>
-          <button className="fo-icon-btn fo-icon-btn--danger" title="מחק" onClick={() => onDelete(form)}>
-            <IconTrash />
-          </button>
-        </div>
+        )}
+        {(canEdit || canDel) && (
+          <div className="fo-card-icons">
+            {canEdit && <button className="fo-icon-btn" title="שכפל" onClick={() => onDuplicate(form)}><IconDuplicate /></button>}
+            {canDel && <button className="fo-icon-btn fo-icon-btn--danger" title="מחק" onClick={() => onDelete(form)}><IconTrash /></button>}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -116,6 +118,7 @@ function FormCard({ form, onEdit, onSubmissions, onTogglePublish, onDuplicate, o
 
 export default function FormsPage() {
   const navigate = useNavigate();
+  const { canEdit, canCreate, canDelete } = usePerms('forms');
   const [search, setSearch]                 = useState('');
   const [filter, setFilter]                 = useState('');
   const [showNew, setShowNew]               = useState(false);
@@ -178,9 +181,9 @@ export default function FormsPage() {
     <div className="fo-page">
 
       <ModuleTopbar icon="ti-forms" title="טפסים דיגיטליים">
-        <button className="tdb-calendar-btn" onClick={() => setShowNew(true)}>
+        {canCreate && <button className="tdb-calendar-btn" onClick={() => setShowNew(true)}>
           <i className="ti ti-plus" /> טופס חדש
-        </button>
+        </button>}
       </ModuleTopbar>
 
       {/* KPI Strip */}
@@ -247,10 +250,13 @@ export default function FormsPage() {
                 <FormCard
                   form={f}
                   onEdit={form => navigate(`/forms/${form.id}/edit`)}
+                  onViewOnly={form => navigate(`/forms/${form.id}/edit?viewOnly=1`)}
                   onSubmissions={form => navigate(`/forms/${form.id}/submissions`)}
                   onTogglePublish={handleTogglePublish}
                   onDuplicate={handleDuplicate}
                   onDelete={setConfirmDelete}
+                  canEdit={canEdit}
+                  canDelete={canDelete}
                 />
               </div>
             ))}
@@ -259,7 +265,7 @@ export default function FormsPage() {
       )}
 
       {/* FAB */}
-      <button className="fo-fab" onClick={() => setShowNew(true)} title="טופס חדש">+</button>
+      {canCreate && <button className="fo-fab" onClick={() => setShowNew(true)} title="טופס חדש">+</button>}
 
       {/* ── Modals ─────────────────────────────────────────────────────────── */}
 

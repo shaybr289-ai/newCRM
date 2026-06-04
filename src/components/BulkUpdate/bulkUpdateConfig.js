@@ -172,7 +172,6 @@ export const BULK_UPDATE_MODULES = [
       { key: 'contact_id',    label: 'איש קשר',       type: 'api_lookup', endpoint: 'contacts', labelField: 'first_name', labelField2: 'last_name' },
       { key: 'street',        label: 'כתובת',         type: 'text' },
       { key: 'city',          label: 'עיר',           type: 'text' },
-      { key: 'contact_name',  label: 'שם איש קשר',   type: 'text' },
       { key: 'status',          label: 'סטטוס',              type: 'select', options: STATUS_OPTIONS },
       { key: 'agreement_id',    label: 'הסכם שירות',         type: 'api_lookup', endpoint: 'service-agreements', labelField: 'agreement_name' },
       { key: 'site_owner_id',   label: 'בעלי רשומה אתר',    type: 'api_lookup', endpoint: 'users', labelField: 'first_name', labelField2: 'last_name' },
@@ -233,11 +232,12 @@ export const BULK_UPDATE_MODULES = [
       { key: 'unit_of_use',        label: 'יחידת מידה',       type: 'text' },
       // ── תאריכים ──
       { key: 'last_purchase_date', label: 'תאריך קנייה אחרון', type: 'date' },
-      { key: 'sale_start_date',    label: 'תחילת מבצע',       type: 'date' },
-      { key: 'sale_end_date',      label: 'סיום מבצע',        type: 'date' },
-      { key: 'sale_entry_date',    label: 'תאריך הזנת מבצע',  type: 'date' },
+      { key: 'sale_start_date',    label: 'תחילת מבצע',        type: 'date' },
+      { key: 'sale_end_date',      label: 'סיום מבצע',         type: 'date' },
+      { key: 'sale_entry_date',    label: 'תאריך הזנת מבצע',   type: 'date' },
       // ── תיאור ──
       { key: 'description',        label: 'תיאור',             type: 'text' },
+      { key: 'created_by',         label: 'בעלי רשומה מוצר',  type: 'api_lookup', endpoint: 'users', labelField: 'first_name', labelField2: 'last_name' },
       { key: 'created_at',         label: 'תאריך יצירה',       type: 'date', readOnly: true },
       { key: 'updated_at',         label: 'תאריך עדכון',       type: 'date', readOnly: true },
     ],

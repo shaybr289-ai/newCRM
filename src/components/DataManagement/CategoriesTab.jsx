@@ -5,7 +5,7 @@ import { Icon, ICONS } from '../../utils/icons';
 import { exportToCSV, importCSV, findColumn } from '../../utils/exportCSV';
 import '../Customers/CustomerModal.css';
 
-export default function CategoriesTab() {
+export default function CategoriesTab({ readOnly = false }) {
   const { data, isLoading } = useCategories();
   const createMut = useCreateCategory();
   const updateMut = useUpdateCategory();
@@ -70,16 +70,22 @@ export default function CategoriesTab() {
         <h3>קטגוריות אב ({items.length})</h3>
         <div style={{ display: 'flex', gap: 8 }}>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="חיפוש..." style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12, width: 180 }} />
-          <button className="btn btn-secondary" onClick={() => exportToCSV(items, ['num','name','description'], ['מספר','שם קטגוריה','תיאור'], 'categories')} style={{ fontSize: 12 }}>
-            יצוא
-          </button>
-          <button className="btn btn-secondary" onClick={() => fileRef.current?.click()} style={{ fontSize: 12 }}>
-            יבוא
-          </button>
-          <input type="file" ref={fileRef} onChange={handleImport} accept=".csv,.xlsx,.xls,.txt" style={{ display: 'none' }} />
-          <button className="btn btn-primary" onClick={() => setEdit({ num: '', name: '', description: '' })} style={{ fontSize: 12 }}>
-            <Icon svg={ICONS.plus} size={14} /> קטגוריה חדשה
-          </button>
+          {!readOnly && (
+            <>
+              <button className="btn btn-secondary" onClick={() => exportToCSV(items, ['num','name','description'], ['מספר','שם קטגוריה','תיאור'], 'categories')} style={{ fontSize: 12 }}>
+                יצוא
+              </button>
+              <button className="btn btn-secondary" onClick={() => fileRef.current?.click()} style={{ fontSize: 12 }}>
+                יבוא
+              </button>
+              <input type="file" ref={fileRef} onChange={handleImport} accept=".csv,.xlsx,.xls,.txt" style={{ display: 'none' }} />
+            </>
+          )}
+          {!readOnly && (
+            <button className="btn btn-primary" onClick={() => setEdit({ num: '', name: '', description: '' })} style={{ fontSize: 12 }}>
+              <Icon svg={ICONS.plus} size={14} /> קטגוריה חדשה
+            </button>
+          )}
         </div>
       </div>
 
@@ -89,7 +95,7 @@ export default function CategoriesTab() {
         </div>
       )}
 
-      <BulkDeleteBar selectedCount={selectedIds.size} totalCount={items.length} onSelectAll={toggleAll} onClear={() => setSelectedIds(new Set())} onDelete={() => setBulkConfirm(true)} isDeleting={bulkDeleteMut.isPending} />
+      {!readOnly && <BulkDeleteBar selectedCount={selectedIds.size} totalCount={items.length} onSelectAll={toggleAll} onClear={() => setSelectedIds(new Set())} onDelete={() => setBulkConfirm(true)} isDeleting={bulkDeleteMut.isPending} />}
 
       {isLoading ? <p style={{ color: 'var(--text-3)', textAlign: 'center', padding: 40 }}>טוען...</p> : (
         <table className="dm-table">
@@ -105,10 +111,12 @@ export default function CategoriesTab() {
                 <td style={{ fontWeight: 600 }}>{c.name}</td>
                 <td style={{ color: 'var(--text-2)', fontSize: 12 }}>{c.description || '—'}</td>
                 <td>
-                  <div className="table-actions">
-                    <button className="action-btn edit" onClick={() => setEdit({ ...c })} title="ערוך"><i className="ti ti-edit" aria-hidden="true" /></button>
-                    <button className="action-btn delete" onClick={() => setDel(c)} title="מחק"><i className="ti ti-trash" aria-hidden="true" /></button>
-                  </div>
+                  {!readOnly && (
+                    <div className="table-actions">
+                      <button className="action-btn edit" onClick={() => setEdit({ ...c })} title="ערוך"><i className="ti ti-edit" aria-hidden="true" /></button>
+                      <button className="action-btn delete" onClick={() => setDel(c)} title="מחק"><i className="ti ti-trash" aria-hidden="true" /></button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}

@@ -11,6 +11,7 @@ export default function SendQuoteModal({ form, items, customer, contact, autoCon
   const contactName = [contact?.first_name, contact?.last_name].filter(Boolean).join(' ');
   const customerName = customer?.company_name || '';
   const quoteName = form?.quote_name || '';
+  const quoteNum = form?.quote_num || '';
 
   const [to, setTo] = useState(contactEmail);
   const [subject, setSubject] = useState(`הצעת מחיר — ${quoteName}`);
@@ -41,8 +42,12 @@ export default function SendQuoteModal({ form, items, customer, contact, autoCon
     if (!tmpl) return;
     const text = (tmpl.body || '')
       .replace(/\{שם_הצעה\}/g, quoteName)
+      .replace(/\{מספר_הצעה\}/g, quoteNum)
       .replace(/\{שם_לקוח\}/g, customerName)
-      .replace(/\{שם_איש_קשר\}/g, contactName);
+      .replace(/\{שם_איש_קשר\}/g, contactName)
+      .replace(/\{מספר_תעודה\}/g, '')
+      .replace(/\{מספר_הזמנה\}/g, '')
+      .replace(/\{שם_דוח\}/g, '');
     setBody(text);
   };
 

@@ -38,3 +38,23 @@ export function useDeleteUser() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
   });
 }
+
+export function useLoginHistory({ page = 1, limit = 50, userId = '', dateFrom = '', dateTo = '' } = {}) {
+  const params = new URLSearchParams({ page, limit });
+  if (userId) params.set('userId', userId);
+  if (dateFrom) params.set('dateFrom', dateFrom);
+  if (dateTo) params.set('dateTo', dateTo);
+  return useQuery({
+    queryKey: ['login-history', page, limit, userId, dateFrom, dateTo],
+    queryFn: () => api.get(`/api/auth/login-history?${params}`),
+    staleTime: 30000,
+  });
+}
+
+export function useMfaRequireAll() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (required) => api.post('/api/users/mfa-require-all', { required }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+  });
+}

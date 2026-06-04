@@ -1,24 +1,32 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useContacts, useCreateContact, useUpdateContact, useDeleteContact } from '../../hooks/useContacts';
 import { useCustomers } from '../../hooks/useCustomers';
 import { useSites, useCreateSite } from '../../hooks/useSites';
-import { CONTACTS_COLUMNS, EMPTY_CONTACT, STATUS_OPTIONS, EMPTY_SITE } from '../../utils/constants';
+import { api } from '../../api/client';
+import { CONTACTS_COLUMNS, EMPTY_CONTACT, EMPTY_SITE } from '../../utils/constants';
+import { useLookups } from '../../hooks/useLookups';
 import { Icon, ICONS } from '../../utils/icons';
 import DataTable from '../Layout/DataTable';
 import ModuleTopbar from '../Layout/ModuleTopbar';
 import OwnerSelect from '../Layout/OwnerSelect';
 import StatsBar from '../Layout/StatsBar';
+import { usePerms } from '../../hooks/usePerms';
+import DeleteConfirmModal from '../Layout/DeleteConfirmModal';
 import '../Layout/EditorPage.css';
 import '../Customers/CustomerModal.css';
 
 export default function ContactsPage() {
+  const navigate = useNavigate();
+  const { canCreate, canEdit, canView, canDelete, canUseButton } = usePerms('contacts');
+  const { customerStatuses } = useLookups();
   const [searchParams, setSearchParams] = useSearchParams();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState(''); // '' | 'primary' | 'vip'
   const [customerFilter, setCustomerFilter] = useState('');
   const [editItem, setEditItem] = useState(null);
+  const [viewOnly, setViewOnly] = useState(false);
   const [confirmDel, setConfirmDel] = useState(null);
 
   const { data, isLoading, error } = useContacts({ page, limit: 50, search, customerId: customerFilter });
@@ -38,11 +46,21 @@ export default function ContactsPage() {
 
   useEffect(() => {
     const editId = searchParams.get('edit');
-    if (editId && data?.data) {
-      const item = data.data.find(c => c.id === editId);
-      if (item) { setEditItem({ ...item }); setSearchParams({}, { replace: true }); }
+    const viewId = searchParams.get('view');
+    const isNew = searchParams.get('new');
+    const custId = searchParams.get('customer_id');
+    if (editId) {
+      setSearchParams({}, { replace: true });
+      api.get(`/api/contacts/${editId}`).then(item => { if (item) { setViewOnly(false); setEditItem(item); } });
+    } else if (viewId) {
+      setSearchParams({}, { replace: true });
+      api.get(`/api/contacts/${viewId}`).then(item => { if (item) { setViewOnly(true); setEditItem(item); } });
+    } else if (isNew) {
+      setSearchParams({}, { replace: true });
+      setViewOnly(false);
+      setEditItem({ ...EMPTY_CONTACT, customer_id: custId || '' });
     }
-  }, [searchParams, data]);
+  }, [searchParams]); // eslint-disable-line
 
   const renderCell = (row, key) => {
     switch (key) {
@@ -64,7 +82,12 @@ export default function ContactsPage() {
     setEditItem(null);
   };
 
-  const handleDelete = async () => { if (!confirmDel) return; await deleteMut.mutateAsync(confirmDel.id); setConfirmDel(null); };
+  const handleDelete = async () => {
+    if (!confirmDel) return;
+    await deleteMut.mutateAsync(confirmDel.id);
+    if (editItem?.id === confirmDel.id) setEditItem(null);
+    setConfirmDel(null);
+  };
   const upd = (k, v) => setEditItem(p => ({ ...p, [k]: v }));
 
   const contactStats = useMemo(() => {
@@ -92,16 +115,30 @@ export default function ContactsPage() {
       <div className="tdb-topbar" style={{ marginBottom: 16 }}>
         <div className="tdb-topbar-left">
           <button className="tdb-calendar-btn" onClick={() => setEditItem(null)}>← חזרה לאנשי קשר</button>
+          {editItem.customer_id && (
+            <button className="tdb-calendar-btn" onClick={() => navigate(`/customers/${editItem.customer_id}`)}>
+              <i className="ti ti-building-store" aria-hidden="true" /> לכרטיס לקוח
+            </button>
+          )}
           <span className="tdb-topbar-icon"><i className="ti ti-user" aria-hidden="true" /></span>
-          <h1 className="tdb-topbar-title">{editItem.id ? `עריכת איש קשר — ${editItem.first_name || ''} ${editItem.last_name || ''}` : 'איש קשר חדש'}</h1>
+          <h1 className="tdb-topbar-title">{viewOnly ? `צפייה — ${editItem.first_name || ''} ${editItem.last_name || ''}` : editItem.id ? `עריכת איש קשר — ${editItem.first_name || ''} ${editItem.last_name || ''}` : 'איש קשר חדש'}</h1>
+          {viewOnly && <span style={{ fontSize: 11, background: '#FEF3C7', color: '#92400E', border: '1px solid #F59E0B66', borderRadius: 999, padding: '2px 10px', fontWeight: 600 }}>צפייה בלבד</span>}
         </div>
         <div className="tdb-topbar-right">
-          <button className="tdb-calendar-btn" style={{ background: 'rgba(255,255,255,0.9)', color: '#074876', fontWeight: 700 }} onClick={handleSave} disabled={createMut.isPending || updateMut.isPending}>
-            {(createMut.isPending || updateMut.isPending) ? 'שומר...' : 'שמור'}
-          </button>
+          {!viewOnly && editItem.id && canDelete && canUseButton('btn_delete') && (
+            <button className="tdb-calendar-btn" style={{ background: 'rgba(220,38,38,0.18)', borderColor: 'rgba(220,38,38,0.5)' }} onClick={() => setConfirmDel(editItem)}>
+              <i className="ti ti-trash" aria-hidden="true" /> מחק
+            </button>
+          )}
+          {!viewOnly && canUseButton('btn_save') && (
+            <button className="tdb-calendar-btn" style={{ background: 'rgba(255,255,255,0.9)', color: '#074876', fontWeight: 700 }} onClick={handleSave} disabled={createMut.isPending || updateMut.isPending}>
+              {(createMut.isPending || updateMut.isPending) ? 'שומר...' : 'שמור'}
+            </button>
+          )}
         </div>
       </div>
       <div className="card">
+        <fieldset disabled={viewOnly} style={{ border: 'none', padding: 0, margin: 0 }}>
         <h3 className="form-section-title">פרטים אישיים</h3>
         <div className="form-grid">
           <div className="form-field"><label>שם פרטי *</label><input value={editItem.first_name || ''} onChange={e => upd('first_name', e.target.value)} autoFocus /></div>
@@ -130,7 +167,7 @@ export default function ContactsPage() {
           <div className="form-field"><label>מחלקה</label><input value={editItem.department || ''} onChange={e => upd('department', e.target.value)} /></div>
           <div className="form-field"><label>סטטוס</label>
             <select value={editItem.status || 'active'} onChange={e => upd('status', e.target.value)}>
-              {STATUS_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              {customerStatuses.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
         </div>
@@ -150,6 +187,7 @@ export default function ContactsPage() {
           </label>
         </div>
         <div className="form-field" style={{ marginTop: 16 }}><label>הערות</label><textarea value={editItem.notes || ''} onChange={e => upd('notes', e.target.value)} rows={3} /></div>
+        </fieldset>
       </div>
 
       {showNewSite && newSiteForm && (
@@ -198,14 +236,17 @@ export default function ContactsPage() {
   return (
     <>
       <ModuleTopbar icon="ti-address-book" title="אנשי קשר">
-        <button className="tdb-calendar-btn" onClick={() => setEditItem({ ...EMPTY_CONTACT })}>
-          <i className="ti ti-plus" aria-hidden="true" /> איש קשר חדש
-        </button>
+        {canCreate && canUseButton('btn_new') && (
+          <button className="tdb-calendar-btn" onClick={() => setEditItem({ ...EMPTY_CONTACT })}>
+            <i className="ti ti-plus" aria-hidden="true" /> איש קשר חדש
+          </button>
+        )}
       </ModuleTopbar>
       <StatsBar stats={contactStats} />
       <DataTable columns={CONTACTS_COLUMNS} data={filteredContacts} total={data?.total || 0} page={page} totalPages={filter ? 1 : (data?.totalPages || 1)}
         isLoading={isLoading} error={error} onSearchChange={s => { setSearch(s); setPage(1); }} onPageChange={setPage}
-        onEdit={row => setEditItem({ ...row })} onDelete={row => setConfirmDel(row)}
+        onEdit={canEdit ? row => { setViewOnly(false); setEditItem({ ...row }); } : undefined}
+        onView={!canEdit && canView ? row => { setViewOnly(true); setEditItem({ ...row }); } : undefined} onDelete={canDelete ? row => setConfirmDel(row) : undefined}
         renderCell={renderCell} storageKey="biz_contact_cols_v3" hideHeader
         customers={customers} onCustomerFilterChange={id => { setCustomerFilter(id); setPage(1); }}
         extraPills={
@@ -220,16 +261,14 @@ export default function ContactsPage() {
         }
       />
       {confirmDel && (
-        <div className="modal-overlay" onClick={() => setConfirmDel(null)}>
-          <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 400, padding: 24 }}>
-            <h3 style={{ marginBottom: 12 }}>מחיקת איש קשר</h3>
-            <p style={{ color: 'var(--text-2)', fontSize: 14, marginBottom: 20 }}>האם למחוק את <strong>{confirmDel.first_name} {confirmDel.last_name || ''}</strong>?</p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn btn-ghost" onClick={() => setConfirmDel(null)}>ביטול</button>
-              <button className="btn btn-danger" onClick={handleDelete} disabled={deleteMut.isPending}>{deleteMut.isPending ? 'מוחק...' : 'מחק'}</button>
-            </div>
-          </div>
-        </div>
+        <DeleteConfirmModal
+          title="מחיקת איש קשר"
+          name={`${confirmDel.first_name} ${confirmDel.last_name || ''}`.trim()}
+          cascade="מחיקת איש הקשר תסיר אותו מכל הרשומות המשויכות אליו."
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmDel(null)}
+          isPending={deleteMut.isPending}
+        />
       )}
     </>
   );

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { CLIENT_TYPES, CURRENCIES, PAYMENT_TERMS, STATUS_OPTIONS, EMPTY_CUSTOMER } from '../../utils/constants';
+import { CURRENCIES, EMPTY_CUSTOMER } from '../../utils/constants';
+import { useLookups } from '../../hooks/useLookups';
 import { Icon, ICONS } from '../../utils/icons';
 import OwnerSelect from '../Layout/OwnerSelect';
 import useAuthStore from '../../store/authStore';
@@ -7,9 +8,9 @@ import '../Layout/EditorPage.css';
 import '../Tasks/TasksDashboard.css';
 import './CustomerModal.css';
 
-export default function CustomerModal({ customer, onSave, onClose, loading, backLabel }) {
+export default function CustomerModal({ customer, onSave, onClose, loading, backLabel, onDelete }) {
   const currentUser = useAuthStore((s) => s.user);
-  // When creating (no existing customer), pre-fill owner_id with current user
+  const { clientTypes, paymentTerms, customerStatuses } = useLookups();
   const initial = customer || { ...EMPTY_CUSTOMER, owner_id: currentUser?.id || '' };
   const [form, setForm] = useState(initial);
   const upd = (k, v) => setForm(p => ({ ...p, [k]: v }));
@@ -31,6 +32,11 @@ export default function CustomerModal({ customer, onSave, onClose, loading, back
           <h1 className="tdb-topbar-title">{isEdit ? `עריכת לקוח — ${form.company_name || ''}` : 'לקוח חדש'}</h1>
         </div>
         <div className="tdb-topbar-right">
+          {isEdit && onDelete && (
+            <button className="tdb-calendar-btn" style={{ background: 'rgba(220,38,38,0.18)', borderColor: 'rgba(220,38,38,0.5)' }} onClick={onDelete}>
+              <i className="ti ti-trash" aria-hidden="true" /> מחק
+            </button>
+          )}
           <button className="tdb-calendar-btn" style={{ background: 'rgba(255,255,255,0.9)', color: '#074876', fontWeight: 700 }} onClick={handleSubmit} disabled={loading}>
             {loading ? 'שומר...' : 'שמור'}
           </button>
@@ -43,7 +49,7 @@ export default function CustomerModal({ customer, onSave, onClose, loading, back
           <div className="form-field"><label>שם חברה *</label><input value={form.company_name || ''} onChange={e => upd('company_name', e.target.value)} autoFocus /></div>
           <div className="form-field"><label>סוג לקוח</label>
             <select value={form.client_type || 'ltd'} onChange={e => upd('client_type', e.target.value)}>
-              {CLIENT_TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              {clientTypes.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
           <div className="form-field"><label>ח.פ / ע.מ</label><input value={form.reg_num || ''} onChange={e => upd('reg_num', e.target.value)} dir="ltr" /></div>
@@ -70,7 +76,7 @@ export default function CustomerModal({ customer, onSave, onClose, loading, back
         <div className="form-grid">
           <div className="form-field"><label>תנאי תשלום</label>
             <select value={form.payment_terms || 'net30'} onChange={e => upd('payment_terms', e.target.value)}>
-              {PAYMENT_TERMS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              {paymentTerms.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
           <div className="form-field"><label>מטבע</label>
@@ -81,7 +87,7 @@ export default function CustomerModal({ customer, onSave, onClose, loading, back
           <div className="form-field"><label>מסגרת אשראי</label><input value={form.credit_limit || ''} onChange={e => upd('credit_limit', e.target.value)} type="number" dir="ltr" /></div>
           <div className="form-field"><label>סטטוס</label>
             <select value={form.status || 'active'} onChange={e => upd('status', e.target.value)}>
-              {STATUS_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              {customerStatuses.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
           <OwnerSelect value={form.owner_id} onChange={v => upd('owner_id', v)} label="בעלי רשומה לקוח" />

@@ -6,16 +6,20 @@ import { useDeals, useCreateDeal, useUpdateDeal, useDeleteDeal } from '../../hoo
 import { useCustomers } from '../../hooks/useCustomers';
 import { useContacts } from '../../hooks/useContacts';
 import { useFamilies } from '../../hooks/useProducts';
-import { DEALS_COLUMNS, EMPTY_DEAL, DEAL_STAGES, DEAL_TYPES, DEAL_PRIORITIES, DEAL_STAGE_COLORS } from '../../utils/constants';
+import { useUsers } from '../../hooks/useUsers';
+import { DEALS_COLUMNS, EMPTY_DEAL, DEAL_STAGES, DEAL_TYPES, DEAL_PRIORITIES, DEAL_STAGE_COLORS, STATUS_OPTIONS } from '../../utils/constants';
 import { Icon, ICONS } from '../../utils/icons';
 import DataTable from '../Layout/DataTable';
 import ModuleTopbar from '../Layout/ModuleTopbar';
 import OwnerSelect from '../Layout/OwnerSelect';
 import StatsBar from '../Layout/StatsBar';
+import { usePerms } from '../../hooks/usePerms';
+import DeleteConfirmModal from '../Layout/DeleteConfirmModal';
 import '../Customers/CustomerModal.css';
 import './DealEditor.css';
 
 export default function DealsPage() {
+  const { canView, canCreate, canEdit, canDelete, canUseButton } = usePerms('deals');
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [page, setPage] = useState(1);
@@ -23,12 +27,14 @@ export default function DealsPage() {
   const [customerFilter, setCustomerFilter] = useState('');
   const [stageFilter, setStageFilter] = useState('');
   const [editItem, setEditItem] = useState(null);
+  const [viewOnly, setViewOnly] = useState(false);
   const [confirmDel, setConfirmDel] = useState(null);
 
   const { data, isLoading, error } = useDeals({ page, limit: 50, search, customerId: customerFilter });
   const { data: custData } = useCustomers({ limit: 500 });
   const { data: contactData } = useContacts({ limit: 500 });
   const { data: famData } = useFamilies();
+  const { data: usersData } = useUsers({ limit: 500 });
   const createMut = useCreateDeal();
   const updateMut = useUpdateDeal();
   const deleteMut = useDeleteDeal();
@@ -43,16 +49,24 @@ export default function DealsPage() {
     return na - nb;
   });
 
+  const users = usersData?.data || [];
   const getCustName = (id) => customers.find(c => c.id === id)?.company_name || '—';
   const getContactName = (id) => { const c = allContacts.find(x => x.id === id); return c ? `${c.first_name || ''} ${c.last_name || ''}`.trim() : '—'; };
+  const getOwnerName = (id) => { const u = users.find(x => x.id === id); return u ? `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username || '—' : '—'; };
   const custContacts = useMemo(() => editItem?.customer_id ? allContacts.filter(c => c.customer_id === editItem.customer_id) : [], [editItem?.customer_id, allContacts]);
 
   // Open edit from URL (e.g. navigating from relations map)
   useEffect(() => {
     const editId = searchParams.get('edit');
+    const isNew = searchParams.get('new');
+    const custId = searchParams.get('customer_id');
+    const viewOnlyParam = searchParams.get('viewOnly') === '1';
     if (editId && deals.length) {
       const deal = deals.find(d => d.id === editId);
-      if (deal) { setEditItem({ ...deal }); setSearchParams({}, { replace: true }); }
+      if (deal) { setViewOnly(viewOnlyParam); setEditItem({ ...deal }); setSearchParams({}, { replace: true }); }
+    } else if (isNew) {
+      setEditItem({ ...EMPTY_DEAL, solutions: [], customer_id: custId || '' });
+      setSearchParams({}, { replace: true });
     }
   }, [searchParams, deals]); // eslint-disable-line
 
@@ -85,6 +99,7 @@ export default function DealsPage() {
         return row[key] ? new Date(row[key]).toLocaleDateString('he-IL') : '—';
       case 'created_at':
         return row.created_at ? new Date(row.created_at).toLocaleDateString('he-IL') : '—';
+      case 'owner': return getOwnerName(row.owner);
       default: return row[key] || '—';
     }
   };
@@ -106,6 +121,7 @@ export default function DealsPage() {
   const handleDelete = async () => {
     if (!confirmDel) return;
     await deleteMut.mutateAsync(confirmDel.id);
+    if (editItem?.id === confirmDel.id) setEditItem(null);
     setConfirmDel(null);
   };
 
@@ -153,21 +169,47 @@ export default function DealsPage() {
         <div className="tdb-topbar" style={{ marginBottom: 16 }}>
           <div className="tdb-topbar-left">
             <button className="tdb-calendar-btn" onClick={() => setEditItem(null)}>← חזרה לעסקאות</button>
+            {editItem.customer_id && (
+              <button className="tdb-calendar-btn" onClick={() => navigate(`/customers/${editItem.customer_id}`)}>
+                <i className="ti ti-building-store" aria-hidden="true" /> לכרטיס לקוח
+              </button>
+            )}
             <span className="tdb-topbar-icon"><i className="ti ti-briefcase" aria-hidden="true" /></span>
             <div>
-              <h1 className="tdb-topbar-title">{editItem.id ? `עריכת עסקה — ${editItem.deal_name || ''}` : 'עסקה חדשה'}</h1>
+              <h1 className="tdb-topbar-title">
+                {viewOnly ? `צפייה — ${editItem.deal_name || ''}` : (editItem.id ? `עריכת עסקה — ${editItem.deal_name || ''}` : 'עסקה חדשה')}
+                {viewOnly && <span style={{ marginRight: 8, fontSize: 11, background: '#F59E0B', color: '#fff', borderRadius: 20, padding: '2px 10px', fontWeight: 600, verticalAlign: 'middle' }}>צפייה בלבד</span>}
+              </h1>
               {editItem.deal_num && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 1 }}>#{editItem.deal_num}</div>}
             </div>
           </div>
           <div className="tdb-topbar-right">
-            {editItem.customer_id && (
+            {editItem.id && canUseButton('btn_new_quote') && (
+              <button className="tdb-calendar-btn" onClick={() => {
+                const params = new URLSearchParams();
+                if (editItem.customer_id) params.set('customer_id', editItem.customer_id);
+                params.set('deal_id', editItem.id);
+                params.set('deal_name', editItem.deal_name || '');
+                navigate(`/quotes/new?${params}`);
+              }}>
+                <i className="ti ti-file-invoice" aria-hidden="true" /> הצעת מחיר חדשה
+              </button>
+            )}
+            {!viewOnly && canUseButton('btn_relation_map') && editItem.customer_id && (
               <button className="tdb-calendar-btn" onClick={() => navigate(`/customers/${editItem.customer_id}/relations`)}>
                 <i className="ti ti-hierarchy" aria-hidden="true" /> מפת קשרים
               </button>
             )}
-            <button className="tdb-calendar-btn" style={{ background: 'rgba(255,255,255,0.9)', color: '#074876', fontWeight: 700 }} onClick={handleSave} disabled={createMut.isPending || updateMut.isPending}>
-              {(createMut.isPending || updateMut.isPending) ? 'שומר...' : 'שמור'}
-            </button>
+            {!viewOnly && editItem.id && canDelete && canUseButton('btn_delete') && (
+              <button className="tdb-calendar-btn" style={{ background: 'rgba(220,38,38,0.18)', borderColor: 'rgba(220,38,38,0.5)' }} onClick={() => setConfirmDel(editItem)}>
+                <i className="ti ti-trash" aria-hidden="true" /> מחק
+              </button>
+            )}
+            {!viewOnly && canUseButton('btn_save') && (
+              <button className="tdb-calendar-btn" style={{ background: 'rgba(255,255,255,0.9)', color: '#074876', fontWeight: 700 }} onClick={handleSave} disabled={createMut.isPending || updateMut.isPending}>
+                {(createMut.isPending || updateMut.isPending) ? 'שומר...' : 'שמור'}
+              </button>
+            )}
           </div>
         </div>
 
@@ -196,6 +238,7 @@ export default function DealsPage() {
 
         {/* Form body */}
         <div className="card" style={{ marginTop: 16 }}>
+          <fieldset disabled={viewOnly} style={{ border: 'none', padding: 0, margin: 0 }}>
           <h3 className="form-section-title">פרטי עסקה</h3>
           <div className="form-grid">
             <div className="form-field">
@@ -206,8 +249,19 @@ export default function DealsPage() {
               <label>לקוח</label>
               <select value={editItem.customer_id || ''} onChange={e => upd('customer_id', e.target.value)}>
                 <option value="">-- בחר לקוח --</option>
-                {customers.map(c => <option key={c.id} value={c.id}>{c.cust_num ? `${c.cust_num} — ` : ''}{c.company_name}</option>)}
+                {customers.map(c => {
+                  const statusLabel = STATUS_OPTIONS.find(([v]) => v === c.status)?.[1] || '';
+                  const showStatus = c.status && c.status !== 'active';
+                  return <option key={c.id} value={c.id}>{c.cust_num ? `${c.cust_num} — ` : ''}{c.company_name}{showStatus ? ` (${statusLabel})` : ''}</option>;
+                })}
               </select>
+              {editItem.customer_id && (() => {
+                const cust = customers.find(c => c.id === editItem.customer_id);
+                const STATUS_COLORS = { warning: '#f59e0b', limited: '#ef4444', potential: '#3b82f6', inactive: '#94a3b8' };
+                if (!cust || !cust.status || cust.status === 'active') return null;
+                const statusLabel = STATUS_OPTIONS.find(([v]) => v === cust.status)?.[1] || cust.status;
+                return <span style={{ fontSize: 12, color: STATUS_COLORS[cust.status] || '#64748b', fontWeight: 600, marginTop: 4, display: 'block' }}>⚠ {statusLabel}</span>;
+              })()}
             </div>
             <div className="form-field">
               <label>איש קשר ראשי</label>
@@ -315,6 +369,7 @@ export default function DealsPage() {
 
           {/* Linked quotes for this deal */}
           {editItem.id && <LinkedQuotes dealId={editItem.id} onOpen={(qId) => navigate(`/quotes/${qId}/edit`)} />}
+          </fieldset>
         </div>
       </div>
     );
@@ -324,9 +379,11 @@ export default function DealsPage() {
   return (
     <>
       <ModuleTopbar icon="ti-currency-shekel" title="עסקאות">
-        <button className="tdb-calendar-btn" onClick={() => setEditItem({ ...EMPTY_DEAL, solutions: [] })}>
-          <i className="ti ti-plus" aria-hidden="true" /> עסקה חדשה
-        </button>
+        {canCreate && canUseButton('btn_new') && (
+          <button className="tdb-calendar-btn" onClick={() => { setViewOnly(false); setEditItem({ ...EMPTY_DEAL, solutions: [] }); }}>
+            <i className="ti ti-plus" aria-hidden="true" /> עסקה חדשה
+          </button>
+        )}
       </ModuleTopbar>
       <StatsBar stats={dealStats} />
       <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -356,8 +413,9 @@ export default function DealsPage() {
         error={error}
         onSearchChange={s => { setSearch(s); setPage(1); }}
         onPageChange={setPage}
-        onEdit={row => setEditItem({ ...row })}
-        onDelete={row => setConfirmDel(row)}
+        onEdit={canEdit ? row => { setViewOnly(false); setEditItem({ ...row }); } : undefined}
+        onView={!canEdit && canView ? row => { setViewOnly(true); setEditItem({ ...row }); } : undefined}
+        onDelete={canDelete ? row => setConfirmDel(row) : undefined}
         renderCell={renderCell}
         storageKey="biz_deals_cols_v3"
         hideHeader
@@ -366,16 +424,14 @@ export default function DealsPage() {
       />
 
       {confirmDel && (
-        <div className="modal-overlay" onClick={() => setConfirmDel(null)}>
-          <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 400, padding: 24 }}>
-            <h3 style={{ marginBottom: 12 }}>מחיקת עסקה</h3>
-            <p style={{ color: 'var(--text-2)', fontSize: 14, marginBottom: 20 }}>האם למחוק את <strong>{confirmDel.deal_name}</strong>?</p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn btn-ghost" onClick={() => setConfirmDel(null)}>ביטול</button>
-              <button className="btn btn-danger" onClick={handleDelete} disabled={deleteMut.isPending}>{deleteMut.isPending ? 'מוחק...' : 'מחק'}</button>
-            </div>
-          </div>
-        </div>
+        <DeleteConfirmModal
+          title="מחיקת עסקה"
+          name={confirmDel.deal_name}
+          cascade="מחיקת העסקה תסיר אותה לצמיתות, כולל כל הצעות המחיר וההזמנות המשויכות אליה."
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmDel(null)}
+          isPending={deleteMut.isPending}
+        />
       )}
     </>
   );

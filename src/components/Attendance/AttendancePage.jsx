@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import useAuthStore from '../../store/authStore';
+import { usePerms } from '../../hooks/usePerms';
 import ModuleTopbar from '../Layout/ModuleTopbar';
 import AttendanceDashboard from './AttendanceDashboard';
 import AttendanceList from './AttendanceList';
@@ -23,8 +23,7 @@ const EMPLOYEE_TABS = [
 ];
 
 export default function AttendancePage() {
-  const user = useAuthStore(s => s.user);
-  const isManager = user?.userType === 'admin' || user?.userType === 'superAdmin';
+  const { canEdit: isManager } = usePerms('attendance');
   const tabs = isManager ? MANAGER_TABS : EMPLOYEE_TABS;
   const [activeTab, setActiveTab] = useState(isManager ? 'dashboard' : 'my');
   const [settingsTab, setSettingsTab] = useState('shifts');

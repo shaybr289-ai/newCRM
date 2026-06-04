@@ -4,6 +4,7 @@ import { REPORT_MODULES, REPORT_JOINS, REPORT_FILTER_OPS } from '../../utils/con
 import { Icon, ICONS } from '../../utils/icons';
 import * as XLSX from 'xlsx';
 import { SubmissionsReportBuilder, SubmissionsReportRunner } from './SubmissionsReport';
+import SendReportModal from './SendReportModal';
 import useAuthStore from '../../store/authStore';
 import { useUsers } from '../../hooks/useUsers';
 import { ReportPermissionsTab } from './ReportPermissionsTab';
@@ -18,6 +19,37 @@ const REPORT_TYPE_LABEL = {
 const STORAGE_KEY = 'biz_reports_v1';
 function loadReports() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; } }
 function saveReports(reports) { localStorage.setItem(STORAGE_KEY, JSON.stringify(reports)); }
+
+const SYSTEM_REPORTS = [
+  {
+    id: 'sys_customers', type: 'standard', name: 'לקוחות', module: 'customers', joinModules: [], filters: [], groupBy: '', isSystem: true,
+    columns: ['customers:cust_num', 'customers:company_name', 'customers:client_type', 'customers:city', 'customers:phone', 'customers:mobile', 'customers:email', 'customers:payment_terms', 'customers:status', 'customers:created_at'],
+  },
+  {
+    id: 'sys_service_agreements', type: 'standard', name: 'הסכמי שירות', module: 'service-agreements', joinModules: ['customers'], filters: [], groupBy: '', isSystem: true,
+    columns: ['service-agreements:agreement_num', 'service-agreements:agreement_name', 'customers:company_name', 'service-agreements:agreement_type', 'service-agreements:service_type', 'service-agreements:start_date', 'service-agreements:end_date', 'service-agreements:auto_renew', 'service-agreements:status'],
+  },
+  {
+    id: 'sys_products', type: 'standard', name: 'מק"טים', module: 'products', joinModules: [], filters: [], groupBy: '', isSystem: true,
+    columns: ['products:sku', 'products:name', 'products:product_type', 'products:sale_price', 'products:unit_price', 'products:mfr_name', 'products:status'],
+  },
+  {
+    id: 'sys_cust_items', type: 'standard', name: 'פריטי לקוח', module: 'cust-items', joinModules: ['customers'], filters: [], groupBy: '', isSystem: true,
+    columns: ['cust-items:item_name', 'cust-items:sku', 'customers:company_name', 'cust-items:quantity', 'cust-items:item_type', 'cust-items:status'],
+  },
+  {
+    id: 'sys_deals', type: 'standard', name: 'עסקאות', module: 'deals', joinModules: ['customers'], filters: [], groupBy: '', isSystem: true,
+    columns: ['deals:deal_num', 'deals:deal_name', 'customers:company_name', 'deals:deal_type', 'deals:stage', 'deals:expected_one_time', 'deals:expected_recurring', 'deals:expected_close_date', 'deals:created_at'],
+  },
+  {
+    id: 'sys_quotes', type: 'standard', name: 'הצעות מחיר', module: 'quotes', joinModules: ['customers'], filters: [], groupBy: '', isSystem: true,
+    columns: ['quotes:quote_num', 'quotes:quote_name', 'customers:company_name', 'quotes:stage', 'quotes:quote_type', 'quotes:quote_date', 'quotes:overall_discount', 'quotes:status', 'quotes:created_at'],
+  },
+  {
+    id: 'sys_orders', type: 'standard', name: 'הזמנות', module: 'orders', joinModules: ['customers'], filters: [], groupBy: '', isSystem: true,
+    columns: ['orders:order_num', 'orders:order_name', 'customers:company_name', 'orders:status', 'orders:order_date', 'orders:delivery_date', 'orders:delivery_type', 'orders:total', 'orders:overall_discount', 'orders:created_at'],
+  },
+];
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function applyFilter(val, op, filterVal) {
@@ -126,6 +158,34 @@ export default function ReportsPage({ embedded = false, defaultView = 'list', de
       </div>
 
       {view === 'list' && (
+        <>
+        <div className="card" style={{ marginBottom: 16 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <i className="ti ti-lock" aria-hidden="true" style={{ color: 'var(--accent)', fontSize: 16 }} />
+            דוחות מערכת
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
+            {SYSTEM_REPORTS.map(rpt => (
+              <button key={rpt.id}
+                onClick={() => { setRunReport({ ...rpt }); setView('run'); }}
+                style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4,
+                  padding: '12px 14px', borderRadius: 10,
+                  border: '1.5px solid var(--border)',
+                  background: 'var(--bg-elevated)',
+                  cursor: 'pointer', textAlign: 'right', fontFamily: 'inherit',
+                  transition: 'border-color 0.15s, background 0.15s',
+                }}
+                onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.background = 'var(--accent-light)'; }}
+                onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg-elevated)'; }}
+              >
+                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)' }}>{rpt.name}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{rpt.columns.length} עמודות</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h3 style={{ fontSize: 16, fontWeight: 700 }}>דוחות שמורים ({filtered.length})</h3>
@@ -180,6 +240,7 @@ export default function ReportsPage({ embedded = false, defaultView = 'list', de
             </table>
           )}
         </div>
+        </>
       )}
 
       {view === 'build' && editReport && (
@@ -478,6 +539,7 @@ function ReportRunner({ report }) {
   const [search, setSearch] = useState('');
   const [sortCol, setSortCol] = useState(null);
   const [sortDir, setSortDir] = useState('asc');
+  const [showSendEmail, setShowSendEmail] = useState(false);
 
   const allModules = [report.module, ...(report.joinModules || [])];
   const allFields = useMemo(() => getAllFields(report.module, report.joinModules), [report.module, report.joinModules]);
@@ -646,6 +708,9 @@ function ReportRunner({ report }) {
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="חיפוש בתוצאות..." style={{ maxWidth: 220 }} />
           <button className="btn btn-secondary" onClick={handleExport} disabled={!filtered.length} style={{ fontSize: 12 }}>ייצוא Excel</button>
+          <button className="btn btn-secondary" onClick={() => setShowSendEmail(true)} disabled={!filtered.length} style={{ fontSize: 12 }}>
+            <i className="ti ti-mail" aria-hidden="true" style={{ marginLeft: 4 }} /> שלח במייל
+          </button>
         </div>
       </div>
 
@@ -679,6 +744,15 @@ function ReportRunner({ report }) {
             </tbody>
           </table>
         </div>
+      )}
+
+      {showSendEmail && (
+        <SendReportModal
+          report={report}
+          selectedFields={selectedFields}
+          filtered={filtered}
+          onClose={() => setShowSendEmail(false)}
+        />
       )}
     </div>
   );

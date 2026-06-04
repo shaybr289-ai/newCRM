@@ -15,10 +15,13 @@ import ModuleTopbar from '../Layout/ModuleTopbar';
 import OwnerSelect from '../Layout/OwnerSelect';
 import StatsBar from '../Layout/StatsBar';
 import SendOrderModal from './SendOrderModal';
+import { usePerms } from '../../hooks/usePerms';
+import DeleteConfirmModal from '../Layout/DeleteConfirmModal';
 import '../Layout/EditorPage.css';
 import '../Customers/CustomerModal.css';
 
 export default function OrdersPage() {
+  const { canView, canCreate, canEdit, canDelete, canUseButton } = usePerms('orders');
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
@@ -26,6 +29,7 @@ export default function OrdersPage() {
   const [customerFilter, setCustomerFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [editItem, setEditItem] = useState(null);
+  const [viewOnly, setViewOnly] = useState(false);
   const [confirmDel, setConfirmDel] = useState(null);
   const [showSendEmail, setShowSendEmail] = useState(false);
 
@@ -78,12 +82,18 @@ export default function OrdersPage() {
     }
   }, [itemsData, editItem?.id]);
 
-  // Open edit from URL
+  // Open edit/new from URL
   useEffect(() => {
     const editId = searchParams.get('edit');
+    const isNew = searchParams.get('new');
+    const custId = searchParams.get('customer_id');
+    const viewOnlyParam = searchParams.get('viewOnly') === '1';
     if (editId && orders.length) {
       const ord = orders.find(o => o.id === editId);
-      if (ord) { setEditItem({ ...ord }); setSearchParams({}, { replace: true }); }
+      if (ord) { setViewOnly(viewOnlyParam); setEditItem({ ...ord }); setSearchParams({}, { replace: true }); }
+    } else if (isNew) {
+      setEditItem({ ...EMPTY_ORDER, customer_id: custId || '' });
+      setSearchParams({}, { replace: true });
     }
   }, [searchParams, orders]);
 
@@ -126,7 +136,12 @@ export default function OrdersPage() {
     setEditItem(null);
   };
 
-  const handleDelete = async () => { if (!confirmDel) return; await deleteMut.mutateAsync(confirmDel.id); setConfirmDel(null); };
+  const handleDelete = async () => {
+    if (!confirmDel) return;
+    await deleteMut.mutateAsync(confirmDel.id);
+    if (editItem?.id === confirmDel.id) setEditItem(null);
+    setConfirmDel(null);
+  };
   const upd = (k, v) => setEditItem(p => ({ ...p, [k]: v }));
 
   const stats = useMemo(() => {
@@ -214,29 +229,37 @@ export default function OrdersPage() {
         <div className="tdb-topbar" style={{ marginBottom: 16 }}>
           <div className="tdb-topbar-left">
             <button className="tdb-calendar-btn" onClick={() => setEditItem(null)}>← חזרה להזמנות</button>
+            {editItem.customer_id && (
+              <button className="tdb-calendar-btn" onClick={() => navigate(`/customers/${editItem.customer_id}`)}>
+                <i className="ti ti-building-store" aria-hidden="true" /> לכרטיס לקוח
+              </button>
+            )}
             <span className="tdb-topbar-icon"><i className="ti ti-shopping-cart" aria-hidden="true" /></span>
             <div>
-              <h1 className="tdb-topbar-title">{editItem.id ? `עריכת הזמנה — ${editItem.order_name || ''}` : 'הזמנה חדשה'}</h1>
+              <h1 className="tdb-topbar-title">
+                {viewOnly ? `צפייה — ${editItem.order_num || ''}` : (editItem.id ? `עריכת הזמנה — ${editItem.order_name || ''}` : 'הזמנה חדשה')}
+                {viewOnly && <span style={{ marginRight: 8, fontSize: 11, background: '#F59E0B', color: '#fff', borderRadius: 20, padding: '2px 10px', fontWeight: 600, verticalAlign: 'middle' }}>צפייה בלבד</span>}
+              </h1>
               {editItem.order_num && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 1 }}>#{editItem.order_num}</div>}
             </div>
           </div>
           <div className="tdb-topbar-right">
-            {editItem.customer_id && (
+            {!viewOnly && canUseButton('btn_relation_map') && editItem.customer_id && (
               <button className="tdb-calendar-btn" onClick={() => navigate(`/customers/${editItem.customer_id}/relations`)}>
                 <i className="ti ti-hierarchy" aria-hidden="true" /> מפת קשרים
               </button>
             )}
-            {editItem.id && (
+            {!viewOnly && canUseButton('btn_delivery_notes') && editItem.id && (
               <button className="tdb-calendar-btn" onClick={() => navigate(`/delivery-notes?order=${editItem.id}`)}>
                 <i className="ti ti-package" aria-hidden="true" /> תעודות משלוח/החזרה
               </button>
             )}
-            {editItem.id && (
+            {!viewOnly && canUseButton('btn_send') && editItem.id && (
               <button className="tdb-calendar-btn" onClick={() => setShowSendEmail(true)} disabled={!editItem.customer_id}>
                 <i className="ti ti-mail" aria-hidden="true" /> שלח במייל
               </button>
             )}
-            {editItem.id && (
+            {!viewOnly && canUseButton('btn_delivery_new') && editItem.id && (
               <button className="tdb-calendar-btn"
                 disabled={createDNMut.isPending || (items || []).length === 0}
                 title={(items || []).length === 0 ? 'לא ניתן להפיק תעודת משלוח — יש להוסיף לפחות פריט אחד להזמנה' : ''}
@@ -254,13 +277,21 @@ export default function OrdersPage() {
                 {createDNMut.isPending ? 'יוצר...' : <><i className="ti ti-truck" aria-hidden="true" /> תעודת משלוח חדשה</>}
               </button>
             )}
-            <button className="tdb-calendar-btn" style={{ background: 'rgba(255,255,255,0.9)', color: '#074876', fontWeight: 700 }} onClick={handleSave} disabled={createMut.isPending || updateMut.isPending}>
-              {(createMut.isPending || updateMut.isPending) ? 'שומר...' : 'שמור'}
-            </button>
+            {!viewOnly && editItem.id && canDelete && canUseButton('btn_delete') && (
+              <button className="tdb-calendar-btn" style={{ background: 'rgba(220,38,38,0.18)', borderColor: 'rgba(220,38,38,0.5)' }} onClick={() => setConfirmDel(editItem)}>
+                <i className="ti ti-trash" aria-hidden="true" /> מחק
+              </button>
+            )}
+            {!viewOnly && canUseButton('btn_save') && (
+              <button className="tdb-calendar-btn" style={{ background: 'rgba(255,255,255,0.9)', color: '#074876', fontWeight: 700 }} onClick={handleSave} disabled={createMut.isPending || updateMut.isPending}>
+                {(createMut.isPending || updateMut.isPending) ? 'שומר...' : 'שמור'}
+              </button>
+            )}
           </div>
         </div>
 
         <div className="card">
+          <fieldset disabled={viewOnly} style={{ border: 'none', padding: 0, margin: 0 }}>
           <h3 className="form-section-title">פרטי הזמנה</h3>
           <div className="form-grid">
             <div className="form-field">
@@ -428,6 +459,7 @@ export default function OrdersPage() {
           <div className="form-field">
             <textarea value={editItem.notes || ''} onChange={e => upd('notes', e.target.value)} rows={3} placeholder="הערות על ההזמנה..." />
           </div>
+          </fieldset>
         </div>
       </div>
     );
@@ -436,9 +468,11 @@ export default function OrdersPage() {
   return (
     <>
       <ModuleTopbar icon="ti-shopping-cart" title="הזמנות">
-        <button className="tdb-calendar-btn" onClick={() => setEditItem({ ...EMPTY_ORDER })}>
-          <i className="ti ti-plus" aria-hidden="true" /> הזמנה חדשה
-        </button>
+        {canCreate && canUseButton('btn_new') && (
+          <button className="tdb-calendar-btn" onClick={() => { setViewOnly(false); setEditItem({ ...EMPTY_ORDER }); }}>
+            <i className="ti ti-plus" aria-hidden="true" /> הזמנה חדשה
+          </button>
+        )}
       </ModuleTopbar>
       <StatsBar stats={stats} />
       <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -460,7 +494,9 @@ export default function OrdersPage() {
       </div>
       <DataTable columns={ORDERS_COLUMNS} data={filteredOrders} total={data?.total || 0} page={page} totalPages={data?.totalPages || 1}
         isLoading={isLoading} error={error} onSearchChange={s => { setSearch(s); setPage(1); }} onPageChange={setPage}
-        onEdit={row => setEditItem({ ...row })} onDelete={row => setConfirmDel(row)}
+        onEdit={canEdit ? row => { setViewOnly(false); setEditItem({ ...row }); } : undefined}
+        onView={!canEdit && canView ? row => { setViewOnly(true); setEditItem({ ...row }); } : undefined}
+        onDelete={canDelete ? row => setConfirmDel(row) : undefined}
         renderCell={renderCell} storageKey="biz_orders_cols_v1" hideHeader
         customers={customers} onCustomerFilterChange={id => { setCustomerFilter(id); setPage(1); }} />
       {showSendEmail && editItem && (
@@ -475,16 +511,14 @@ export default function OrdersPage() {
       )}
 
       {confirmDel && (
-        <div className="modal-overlay" onClick={() => setConfirmDel(null)}>
-          <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 400, padding: 24 }}>
-            <h3 style={{ marginBottom: 12 }}>מחיקת הזמנה</h3>
-            <p style={{ color: 'var(--text-2)', fontSize: 14, marginBottom: 20 }}>האם למחוק את <strong>{confirmDel.order_name}</strong>?</p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn btn-ghost" onClick={() => setConfirmDel(null)}>ביטול</button>
-              <button className="btn btn-danger" onClick={handleDelete} disabled={deleteMut.isPending}>{deleteMut.isPending ? 'מוחק...' : 'מחק'}</button>
-            </div>
-          </div>
-        </div>
+        <DeleteConfirmModal
+          title="מחיקת הזמנה"
+          name={confirmDel.order_name}
+          cascade="מחיקת ההזמנה תסיר אותה לצמיתות, כולל כל שורות הפריטים המשויכות אליה."
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmDel(null)}
+          isPending={deleteMut.isPending}
+        />
       )}
     </>
   );

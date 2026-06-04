@@ -43,8 +43,13 @@ export default function SendDeliveryNoteModal({ note, items, customer, contact, 
     if (!tmpl) return;
     const text = (tmpl.body || '')
       .replace(/\{שם_תעודה\}/g, note?.note_num || '')
+      .replace(/\{מספר_תעודה\}/g, note?.note_num || '')
+      .replace(/\{מספר_הזמנה\}/g, order?.order_num || '')
       .replace(/\{שם_לקוח\}/g, customerName)
-      .replace(/\{שם_איש_קשר\}/g, contactName);
+      .replace(/\{שם_איש_קשר\}/g, contactName)
+      .replace(/\{שם_הצעה\}/g, '')
+      .replace(/\{מספר_הצעה\}/g, '')
+      .replace(/\{שם_דוח\}/g, '');
     setBody(text);
   };
 

@@ -4,12 +4,14 @@ import { computeFamilyDepth, getDescendantFamilyIds, getFamilyLevelLabel, getNex
 import { Icon, ICONS } from '../../utils/icons';
 import { exportToCSV, importCSV, findColumn } from '../../utils/exportCSV';
 import { BulkDeleteBar, BulkDeleteConfirm, SelectCheckbox } from './BulkDeleteBar';
+import HierarchyTab from './HierarchyTab';
 import '../Customers/CustomerModal.css';
 
 const FAMILY_TYPES = [['onetime', 'חד"פ'], ['recurring', 'שוטף']];
 const emptyRow = () => ({ famCode: '', famName: '', famType: 'חד"פ', parentCode: '' });
 
-export default function FamiliesTab() {
+export default function FamiliesTab({ readOnly = false }) {
+  const [subTab, setSubTab] = useState('list');
   const { data, isLoading } = useFamilies();
   const { data: catData } = useCategories();
   const { data: levelData } = useFamilyLevels();
@@ -140,20 +142,39 @@ export default function FamiliesTab() {
 
   return (
     <div>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '2px solid var(--border)' }}>
+        {[['list', 'רשימה'], ['hierarchy', 'היררכיה']].map(([id, label]) => (
+          <button key={id} onClick={() => setSubTab(id)}
+            style={{ padding: '8px 20px', border: 'none', background: 'none', cursor: 'pointer', fontWeight: subTab === id ? 700 : 400,
+              color: subTab === id ? 'var(--accent)' : 'var(--text-2)',
+              borderBottom: subTab === id ? '2px solid var(--accent)' : '2px solid transparent', marginBottom: -2, fontSize: 14 }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {subTab === 'hierarchy' && <HierarchyTab readOnly={readOnly} />}
+      {subTab === 'list' && <>
       <div className="dm-table-header">
         <h3>משפחות מוצר ({items.length})</h3>
         <div style={{ display: 'flex', gap: 8 }}>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="חיפוש..." style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12, width: 180 }} />
-          <button className="btn btn-secondary" onClick={() => {
-            const exportData = families.map(f => ({ ...f, parentCatName: getCatName(f.parent_cat_id), familyTypeLabel: f.family_type === 'recurring' ? 'שוטף' : 'חד"פ' }));
-            exportToCSV(exportData, ['num', 'name', 'familyTypeLabel', 'parentCatName'], ['מספר', 'שם משפחה', 'סוג משפחה', 'קטגוריית אב'], 'families');
-          }} style={{ fontSize: 12 }}>יצוא</button>
-          <button className={`btn ${showImport ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setShowImport(p => !p)} style={{ fontSize: 12 }}>
-            ייבוא משפחות
-          </button>
-          <button className="btn btn-primary" onClick={() => setEdit({ num: '', name: '', family_type: 'onetime', parent_cat_id: '' })} style={{ fontSize: 12 }}>
-            <Icon svg={ICONS.plus} size={14} /> משפחה חדשה
-          </button>
+          {!readOnly && (
+            <>
+              <button className="btn btn-secondary" onClick={() => {
+                const exportData = families.map(f => ({ ...f, parentCatName: getCatName(f.parent_cat_id), familyTypeLabel: f.family_type === 'recurring' ? 'שוטף' : 'חד"פ' }));
+                exportToCSV(exportData, ['num', 'name', 'familyTypeLabel', 'parentCatName'], ['מספר', 'שם משפחה', 'סוג משפחה', 'קטגוריית אב'], 'families');
+              }} style={{ fontSize: 12 }}>יצוא</button>
+              <button className={`btn ${showImport ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setShowImport(p => !p)} style={{ fontSize: 12 }}>
+                ייבוא משפחות
+              </button>
+            </>
+          )}
+          {!readOnly && (
+            <button className="btn btn-primary" onClick={() => setEdit({ num: '', name: '', family_type: 'onetime', parent_cat_id: '' })} style={{ fontSize: 12 }}>
+              <Icon svg={ICONS.plus} size={14} /> משפחה חדשה
+            </button>
+          )}
         </div>
       </div>
 
@@ -231,7 +252,7 @@ export default function FamiliesTab() {
         </div>
       )}
 
-      <BulkDeleteBar selectedCount={selectedIds.size} totalCount={items.length} onSelectAll={toggleAll} onClear={() => setSelectedIds(new Set())} onDelete={() => setBulkConfirm(true)} isDeleting={bulkDeleteMut.isPending} />
+      {!readOnly && <BulkDeleteBar selectedCount={selectedIds.size} totalCount={items.length} onSelectAll={toggleAll} onClear={() => setSelectedIds(new Set())} onDelete={() => setBulkConfirm(true)} isDeleting={bulkDeleteMut.isPending} />}
 
       {isLoading ? <p style={{ color: 'var(--text-3)', textAlign: 'center', padding: 40 }}>טוען...</p> : (
         <table className="dm-table">
@@ -263,10 +284,12 @@ export default function FamiliesTab() {
                       {f.family_type === 'recurring' ? 'שוטף' : 'חד"פ'}</span></td>
                     <td>{f.parent_family_id ? <span style={{ color: 'var(--accent)' }}><i className="ti ti-folder" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 2 }} /> {getFamilyName(f.parent_family_id)}</span> : (f.parent_cat_id ? <span style={{ color: 'var(--text-2)' }}><i className="ti ti-folder" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 2 }} /> {getCatName(f.parent_cat_id)}</span> : '—')}</td>
                     <td onClick={e => e.stopPropagation()}>
-                      <div className="table-actions">
-                        <button className="action-btn edit" onClick={() => setEdit({ ...f })} title="ערוך"><i className="ti ti-edit" aria-hidden="true" /></button>
-                        <button className="action-btn delete" onClick={() => setDel(f)} title="מחק"><i className="ti ti-trash" aria-hidden="true" /></button>
-                      </div>
+                      {!readOnly && (
+                        <div className="table-actions">
+                          <button className="action-btn edit" onClick={() => setEdit({ ...f })} title="ערוך"><i className="ti ti-edit" aria-hidden="true" /></button>
+                          <button className="action-btn delete" onClick={() => setDel(f)} title="מחק"><i className="ti ti-trash" aria-hidden="true" /></button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                   {isExpanded && (
@@ -416,6 +439,7 @@ export default function FamiliesTab() {
 
       {/* Bulk delete */}
       {bulkConfirm && <BulkDeleteConfirm count={selectedIds.size} entityName="משפחות" onConfirm={handleBulkDelete} onCancel={() => setBulkConfirm(false)} isDeleting={bulkDeleteMut.isPending} />}
+      </>}
     </div>
   );
 }

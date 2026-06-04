@@ -898,6 +898,7 @@ export default function TasksCalendar() {
       <div className="tcal-topbar">
         <div className="tcal-topbar-start">
           <button className="tcal-back-btn" onClick={() => navigate('/tasks')}>← משימות</button>
+          <button className="tcal-back-btn" onClick={() => navigate('/tasks/dashboard')}>← דשבורד משימות</button>
           <span className="tcal-topbar-icon"><i className="ti ti-calendar" aria-hidden="true" /></span>
           <h1 className="tcal-topbar-title">יומן עובדים</h1>
         </div>

@@ -2,12 +2,15 @@ import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomers, useCreateCustomer, useUpdateCustomer, useDeleteCustomer } from '../../hooks/useCustomers';
 import { useUsers } from '../../hooks/useUsers';
-import { CUSTOMERS_COLUMNS, getClientTypeLabel } from '../../utils/constants';
+import { CUSTOMERS_COLUMNS } from '../../utils/constants';
+import { useLookups, lookupLabel } from '../../hooks/useLookups';
 import { Icon, ICONS } from '../../utils/icons';
 import CustomerModal from './CustomerModal';
 import StatsBar from '../Layout/StatsBar';
 import ModuleTopbar from '../Layout/ModuleTopbar';
 import useAuthStore from '../../store/authStore';
+import { usePerms } from '../../hooks/usePerms';
+import DeleteConfirmModal from '../Layout/DeleteConfirmModal';
 import './CustomersPage.css';
 
 const DEFAULT_VISIBLE = CUSTOMERS_COLUMNS.filter(c => c.defaultVisible).map(c => c.key);
@@ -22,7 +25,8 @@ const COL_SECTIONS = CUSTOMERS_COLUMNS.reduce((acc, col) => {
 
 export default function CustomersPage() {
   const currentUser = useAuthStore((s) => s.user);
-  const { data: usersData } = useUsers();
+  const { canCreate, canEdit, canView, canDelete } = usePerms('customers');
+  const { data: usersData } = useUsers({ limit: 500 });
   const users = usersData?.data || [];
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -75,6 +79,7 @@ export default function CustomersPage() {
   const customers = data?.data || [];
   const total = data?.total || 0;
   const totalPages = data?.totalPages || 1;
+  const { clientTypes, customerStatuses } = useLookups();
 
   const handleSearch = (e) => {
     e?.preventDefault();
@@ -94,23 +99,23 @@ export default function CustomersPage() {
   const handleDelete = async () => {
     if (!confirmDel) return;
     await deleteMut.mutateAsync(confirmDel.id);
+    if (editCust?.id === confirmDel.id) setEditCust(null);
     setConfirmDel(null);
   };
 
   const renderCellValue = (cust, key) => {
     switch (key) {
-      case 'client_type': return getClientTypeLabel(cust.client_type);
+      case 'client_type': return lookupLabel(clientTypes, cust.client_type);
       case 'owner_id': {
         if (!cust.owner_id) return '—';
         const u = users.find(u => u.id === cust.owner_id);
         return u ? (`${u.first_name || ''} ${u.last_name || ''}`).trim() || u.username || '—' : '—';
       }
-      case 'status':
-        return (
-          <span className={`badge ${cust.status === 'active' ? 'badge-success' : 'badge-danger'}`}>
-            {cust.status === 'active' ? 'פעיל' : 'לא פעיל'}
-          </span>
-        );
+      case 'status': {
+        const STATUS_BADGE = { active: 'badge-success', inactive: 'badge-danger', warning: 'badge-warning', limited: 'badge-danger', potential: 'badge-info' };
+        const label = lookupLabel(customerStatuses, cust.status);
+        return <span className={`badge ${STATUS_BADGE[cust.status] || 'badge-secondary'}`}>{label}</span>;
+      }
       case 'created_at':
         return cust.created_at ? new Date(cust.created_at).toLocaleDateString('he-IL') : '—';
       default:
@@ -133,21 +138,36 @@ export default function CustomersPage() {
   // Full-page editor for create/edit (instead of modal overlay)
   if (editCust !== null) {
     return (
-      <CustomerModal
-        customer={editCust.id ? editCust : null}
-        onSave={handleSave}
-        onClose={() => setEditCust(null)}
-        loading={createMut.isPending || updateMut.isPending}
-      />
+      <>
+        <CustomerModal
+          customer={editCust.id ? editCust : null}
+          onSave={handleSave}
+          onClose={() => setEditCust(null)}
+          loading={createMut.isPending || updateMut.isPending}
+          onDelete={editCust.id && canDelete ? () => setConfirmDel(editCust) : undefined}
+        />
+        {confirmDel && (
+          <DeleteConfirmModal
+            title="מחיקת לקוח"
+            name={confirmDel.company_name}
+            cascade="המחיקה תשפיע על כל הרשומות המשויכות ללקוח זה: אנשי קשר, אתרי לקוח, הסכמי שירות, פריטי לקוח, עסקאות, הצעות מחיר והזמנות."
+            onConfirm={handleDelete}
+            onCancel={() => setConfirmDel(null)}
+            isPending={deleteMut.isPending}
+          />
+        )}
+      </>
     );
   }
 
   return (
     <div className="animate-in">
       <ModuleTopbar icon="ti-users" title="לקוחות">
-        <button className="tdb-calendar-btn" onClick={() => setEditCust({ owner_id: currentUser?.id || '' })} style={{ background: 'rgba(255,255,255,.25)', borderColor: 'rgba(255,255,255,.5)', fontWeight: 700 }}>
-          <i className="ti ti-plus" aria-hidden="true" /> לקוח חדש
-        </button>
+        {canCreate && (
+          <button className="tdb-calendar-btn" onClick={() => setEditCust({ owner_id: currentUser?.id || '' })} style={{ background: 'rgba(255,255,255,.25)', borderColor: 'rgba(255,255,255,.5)', fontWeight: 700 }}>
+            <i className="ti ti-plus" aria-hidden="true" /> לקוח חדש
+          </button>
+        )}
       </ModuleTopbar>
       <StatsBar stats={custStats} />
 
@@ -261,15 +281,25 @@ export default function CustomersPage() {
                       ))}
                       <td>
                         <div className="table-actions" onClick={e => e.stopPropagation()}>
-                          <button className="action-btn edit" onClick={() => navigate(`/customers/${cust.id}`)} title="כרטיס לקוח">
-                            <i className="ti ti-eye" aria-hidden="true" />
-                          </button>
-                          <button className="action-btn edit" onClick={() => setEditCust(cust)} title="עריכה">
-                            <i className="ti ti-edit" aria-hidden="true" />
-                          </button>
-                          <button className="action-btn delete" onClick={() => setConfirmDel(cust)} title="מחיקה">
-                            <i className="ti ti-trash" aria-hidden="true" />
-                          </button>
+                          {canEdit && (
+                            <button className="tbl-action-btn tbl-action-edit" onClick={() => setEditCust(cust)} title="עריכה">
+                              <i className="ti ti-edit" aria-hidden="true" />
+                              עריכה
+                            </button>
+                          )}
+                          {!canEdit && canView && (
+                            <button className="tbl-action-btn tbl-action-edit" onClick={() => navigate(`/customers/${cust.id}`)} title="צפייה"
+                              style={{ color: '#5B7FA6', borderColor: '#C5E3F7' }}>
+                              <i className="ti ti-eye" aria-hidden="true" />
+                              צפייה
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button className="tbl-action-btn tbl-action-delete" onClick={() => setConfirmDel(cust)} title="מחיקה">
+                              <i className="ti ti-trash" aria-hidden="true" />
+                              מחק
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

@@ -27,6 +27,9 @@ export const PAYMENT_TERMS = [
 
 export const STATUS_OPTIONS = [
   ['active', 'פעיל'],
+  ['potential', 'לקוח פוטנציאלי'],
+  ['warning', 'אזהרת חסימה'],
+  ['limited', 'לקוח מוגבל'],
   ['inactive', 'לא פעיל'],
 ];
 
@@ -564,6 +567,76 @@ export const EMPTY_CUST_ITEM = {
   ff_active_equip_owner: '', ff_equip_type: '', ff_serial_firewall: '',
   ff_serial_bridge: '', ff_serial_gpon: '', ff_xfiber_conn_type: '',
   ff_static_ip: '', ff_vlan: '',
+};
+
+// ── LEADS ─────────────────────────────────────────────────────────────────────
+
+export const LEAD_SOURCES = [
+  ['phone', 'טלפון'],
+  ['email', 'אי-מייל'],
+  ['whatsapp', 'WhatsApp'],
+  ['facebook', 'Facebook'],
+  ['linkedin', 'LinkedIn'],
+  ['website', 'אתר אינטרנט'],
+  ['referral', 'הפנייה'],
+  ['other', 'אחר'],
+];
+
+export const LEAD_PRIORITIES = [
+  ['1', '1 — נמוכה'],
+  ['2', '2'],
+  ['3', '3 — בינונית'],
+  ['4', '4'],
+  ['5', '5 — גבוהה'],
+];
+
+export const DEFAULT_LEAD_STATUSES = [
+  ['new', 'ליד חדש'],
+  ['contacted', 'נוצר קשר'],
+  ['qualified', 'מוכשר'],
+  ['proposal', 'הוצעה הצעה'],
+  ['negotiation', 'משא ומתן'],
+  ['converted', 'הומר'],
+  ['lost', 'אבוד'],
+];
+
+export const LEADS_COLUMNS = [
+  { key: 'lead_num', label: "מס' ליד", section: 'כללי', defaultVisible: true },
+  { key: 'first_name', label: 'שם פרטי', section: 'כללי', defaultVisible: true },
+  { key: 'last_name', label: 'שם משפחה', section: 'כללי', defaultVisible: true },
+  { key: 'company_name', label: 'שם חברה', section: 'כללי', defaultVisible: true },
+  { key: 'customer_id', label: 'לקוח קיים', section: 'כללי', defaultVisible: true },
+  { key: 'contact_id', label: 'איש קשר קיים', section: 'כללי', defaultVisible: true },
+  { key: 'mobile', label: 'נייד', section: 'כללי', defaultVisible: true },
+  { key: 'email', label: 'אי-מייל', section: 'כללי', defaultVisible: true },
+  { key: 'status', label: 'סטטוס', section: 'כללי', defaultVisible: true },
+  { key: 'converted', label: 'הומר', section: 'כללי', defaultVisible: true },
+  { key: 'lead_source', label: 'מקור', section: 'כללי', defaultVisible: false },
+  { key: 'priority', label: 'עדיפות', section: 'כללי', defaultVisible: true },
+  { key: 'owner_id', label: 'בעלי ליד', section: 'כללי', defaultVisible: true },
+  { key: 'city', label: 'עיר', section: 'כתובת', defaultVisible: false },
+  { key: 'role', label: 'תפקיד', section: 'פרטים נוספים', defaultVisible: false },
+  { key: 'created_at', label: 'תאריך יצירה', section: 'פרטים נוספים', defaultVisible: false },
+];
+
+export const EMPTY_LEAD = {
+  first_name: '',
+  last_name: '',
+  role: '',
+  company_name: '',
+  customer_id: '',
+  client_type: '',
+  mobile: '',
+  phone: '',
+  email: '',
+  status: 'new',
+  description: '',
+  solutions: [],
+  lead_source: '',
+  city: '',
+  address: '',
+  priority: '3',
+  owner_id: '',
 };
 
 // ── Reports ──────────────────────────────────────────────────────────────────

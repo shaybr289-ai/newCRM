@@ -7,9 +7,12 @@ import { Icon, ICONS } from '../../utils/icons';
 import DataTable from '../Layout/DataTable';
 import StatsBar from '../Layout/StatsBar';
 import ModuleTopbar from '../Layout/ModuleTopbar';
+import { usePerms } from '../../hooks/usePerms';
+import DeleteConfirmModal from '../Layout/DeleteConfirmModal';
 import '../Customers/CustomerModal.css';
 
 export default function QuotesPage() {
+  const { canView, canCreate, canEdit, canDelete, canUseButton } = usePerms('quotes');
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [stageFilter, setStageFilter] = useState('');
@@ -77,12 +80,16 @@ export default function QuotesPage() {
   return (
     <>
       <ModuleTopbar icon="ti-file-invoice" title="הצעות מחיר">
-        <button className="tdb-calendar-btn" onClick={() => navigate('/quotes/templates')}>
-          <i className="ti ti-copy" aria-hidden="true" /> תבניות הצעות
-        </button>
-        <button className="tdb-calendar-btn" onClick={() => navigate('/quotes/new')} style={{ background: 'rgba(255,255,255,.25)', borderColor: 'rgba(255,255,255,.5)', fontWeight: 700 }}>
-          <i className="ti ti-plus" aria-hidden="true" /> הצעת מחיר חדשה
-        </button>
+        {canUseButton('btn_templates') && (
+          <button className="tdb-calendar-btn" onClick={() => navigate('/quotes/templates')}>
+            <i className="ti ti-copy" aria-hidden="true" /> תבניות הצעות
+          </button>
+        )}
+        {canCreate && canUseButton('btn_new') && (
+          <button className="tdb-calendar-btn" onClick={() => navigate('/quotes/new')} style={{ background: 'rgba(255,255,255,.25)', borderColor: 'rgba(255,255,255,.5)', fontWeight: 700 }}>
+            <i className="ti ti-plus" aria-hidden="true" /> הצעת מחיר חדשה
+          </button>
+        )}
       </ModuleTopbar>
       <StatsBar stats={quoteStats} />
       {/* Stage Filter Pills */}
@@ -119,8 +126,9 @@ export default function QuotesPage() {
         error={error}
         onSearchChange={s => { setSearch(s); setPage(1); }}
         onPageChange={setPage}
-        onEdit={row => navigate(`/quotes/${row.id}/edit`)}
-        onDelete={row => setConfirmDel(row)}
+        onEdit={canEdit ? row => navigate(`/quotes/${row.id}/edit`) : undefined}
+        onView={!canEdit && canView ? row => navigate(`/quotes/${row.id}/edit?viewOnly=1`) : undefined}
+        onDelete={canDelete ? row => setConfirmDel(row) : undefined}
         renderCell={renderCell}
         storageKey="biz_quotes_cols_v3"
         hideHeader
@@ -130,20 +138,14 @@ export default function QuotesPage() {
 
       {/* Delete Confirm */}
       {confirmDel && (
-        <div className="modal-overlay" onClick={() => setConfirmDel(null)}>
-          <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 400, padding: 24 }}>
-            <h3 style={{ marginBottom: 12 }}>מחיקת הצעת מחיר</h3>
-            <p style={{ color: 'var(--text-2)', fontSize: 14, marginBottom: 20 }}>
-              האם למחוק את <strong>{confirmDel.quote_name}</strong>?
-            </p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn btn-ghost" onClick={() => setConfirmDel(null)}>ביטול</button>
-              <button className="btn btn-danger" onClick={handleDelete} disabled={deleteMut.isPending}>
-                {deleteMut.isPending ? 'מוחק...' : 'מחק'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <DeleteConfirmModal
+          title="מחיקת הצעת מחיר"
+          name={confirmDel.quote_name}
+          cascade="מחיקת הצעת המחיר תסיר אותה לצמיתות, כולל כל שורות הפריטים המשויכות אליה."
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmDel(null)}
+          isPending={deleteMut.isPending}
+        />
       )}
     </>
   );

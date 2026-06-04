@@ -5,7 +5,7 @@ import { Icon, ICONS } from '../../utils/icons';
 import { exportToCSV, importCSV, findColumn } from '../../utils/exportCSV';
 import '../Customers/CustomerModal.css';
 
-export default function ManufacturersTab() {
+export default function ManufacturersTab({ readOnly = false }) {
   const { data, isLoading } = useManufacturers();
   const createMut = useCreateManufacturer();
   const deleteMut = useDeleteManufacturer();
@@ -97,16 +97,22 @@ export default function ManufacturersTab() {
         <h3>יצרנים ({items.length})</h3>
         <div style={{ display: 'flex', gap: 8 }}>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="חיפוש..." style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12, width: 180 }} />
-          <button className="btn btn-secondary" onClick={() => exportToCSV(items, ['num', 'name'], ['מספר יצרן', 'שם יצרן'], 'manufacturers')} style={{ fontSize: 12 }}>
-            יצוא
-          </button>
-          <button className="btn btn-secondary" onClick={() => fileRef.current?.click()} style={{ fontSize: 12 }}>
-            יבוא
-          </button>
-          <input type="file" ref={fileRef} onChange={handleImport} accept=".csv,.xlsx,.xls,.txt" style={{ display: 'none' }} />
-          <button className="btn btn-primary" onClick={() => setEdit({ name: '', num: '' })} style={{ fontSize: 12 }}>
-            <Icon svg={ICONS.plus} size={14} /> יצרן חדש
-          </button>
+          {!readOnly && (
+            <>
+              <button className="btn btn-secondary" onClick={() => exportToCSV(items, ['num', 'name'], ['מספר יצרן', 'שם יצרן'], 'manufacturers')} style={{ fontSize: 12 }}>
+                יצוא
+              </button>
+              <button className="btn btn-secondary" onClick={() => fileRef.current?.click()} style={{ fontSize: 12 }}>
+                יבוא
+              </button>
+              <input type="file" ref={fileRef} onChange={handleImport} accept=".csv,.xlsx,.xls,.txt" style={{ display: 'none' }} />
+            </>
+          )}
+          {!readOnly && (
+            <button className="btn btn-primary" onClick={() => setEdit({ name: '', num: '' })} style={{ fontSize: 12 }}>
+              <Icon svg={ICONS.plus} size={14} /> יצרן חדש
+            </button>
+          )}
         </div>
       </div>
 
@@ -116,7 +122,7 @@ export default function ManufacturersTab() {
         </div>
       )}
 
-      <BulkDeleteBar selectedCount={selectedIds.size} totalCount={items.length} onSelectAll={toggleAll} onClear={() => setSelectedIds(new Set())} onDelete={() => setBulkConfirm(true)} isDeleting={bulkDeleteMut.isPending} />
+      {!readOnly && <BulkDeleteBar selectedCount={selectedIds.size} totalCount={items.length} onSelectAll={toggleAll} onClear={() => setSelectedIds(new Set())} onDelete={() => setBulkConfirm(true)} isDeleting={bulkDeleteMut.isPending} />}
 
       {isLoading ? <p style={{ color: 'var(--text-3)', textAlign: 'center', padding: 40 }}>טוען...</p> : (
         <table className="dm-table">
@@ -131,7 +137,7 @@ export default function ManufacturersTab() {
                 <td style={{ fontWeight: 700, color: '#7C3AED' }}>{m.num || '—'}</td>
                 <td style={{ fontWeight: 600 }}>{m.name}</td>
                 <td>
-                  <button className="action-btn delete" onClick={() => setDel(m)} title="מחק"><i className="ti ti-trash" aria-hidden="true" /></button>
+                  {!readOnly && <button className="action-btn delete" onClick={() => setDel(m)} title="מחק"><i className="ti ti-trash" aria-hidden="true" /></button>}
                 </td>
               </tr>
             ))}

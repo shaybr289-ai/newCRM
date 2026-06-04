@@ -12,6 +12,38 @@ function loadCustomReports() { try { return JSON.parse(localStorage.getItem(STOR
 
 const REPORT_TYPE_LABEL = { standard: 'מודולים', submissions: 'טפסים' };
 
+// ── Module system reports (run via ReportsPage ReportRunner) ────────────────
+const MODULE_SYSTEM_REPORTS = [
+  {
+    id: 'sys_customers', type: 'standard', name: 'לקוחות', module: 'customers', joinModules: [], filters: [], groupBy: '',
+    columns: ['customers:cust_num', 'customers:company_name', 'customers:client_type', 'customers:city', 'customers:phone', 'customers:mobile', 'customers:email', 'customers:payment_terms', 'customers:status', 'customers:created_at'],
+  },
+  {
+    id: 'sys_service_agreements', type: 'standard', name: 'הסכמי שירות', module: 'service-agreements', joinModules: ['customers'], filters: [], groupBy: '',
+    columns: ['service-agreements:agreement_num', 'service-agreements:agreement_name', 'customers:company_name', 'service-agreements:agreement_type', 'service-agreements:service_type', 'service-agreements:start_date', 'service-agreements:end_date', 'service-agreements:auto_renew', 'service-agreements:status'],
+  },
+  {
+    id: 'sys_products', type: 'standard', name: 'מק"טים', module: 'products', joinModules: [], filters: [], groupBy: '',
+    columns: ['products:sku', 'products:name', 'products:product_type', 'products:sale_price', 'products:unit_price', 'products:mfr_name', 'products:status'],
+  },
+  {
+    id: 'sys_cust_items', type: 'standard', name: 'פריטי לקוח', module: 'cust-items', joinModules: ['customers'], filters: [], groupBy: '',
+    columns: ['cust-items:item_name', 'cust-items:sku', 'customers:company_name', 'cust-items:quantity', 'cust-items:item_type', 'cust-items:status'],
+  },
+  {
+    id: 'sys_deals', type: 'standard', name: 'עסקאות', module: 'deals', joinModules: ['customers'], filters: [], groupBy: '',
+    columns: ['deals:deal_num', 'deals:deal_name', 'customers:company_name', 'deals:deal_type', 'deals:stage', 'deals:expected_one_time', 'deals:expected_recurring', 'deals:expected_close_date', 'deals:created_at'],
+  },
+  {
+    id: 'sys_quotes', type: 'standard', name: 'הצעות מחיר', module: 'quotes', joinModules: ['customers'], filters: [], groupBy: '',
+    columns: ['quotes:quote_num', 'quotes:quote_name', 'customers:company_name', 'quotes:stage', 'quotes:quote_type', 'quotes:quote_date', 'quotes:overall_discount', 'quotes:status', 'quotes:created_at'],
+  },
+  {
+    id: 'sys_orders', type: 'standard', name: 'הזמנות', module: 'orders', joinModules: ['customers'], filters: [], groupBy: '',
+    columns: ['orders:order_num', 'orders:order_name', 'customers:company_name', 'orders:status', 'orders:order_date', 'orders:delivery_date', 'orders:delivery_type', 'orders:total', 'orders:overall_discount', 'orders:created_at'],
+  },
+];
+
 // ── System reports registry ─────────────────────────────────────────────────
 const SYSTEM_REPORTS = [
   {
@@ -168,6 +200,32 @@ export default function ReportsHub() {
         {/* ── Right panel: System reports (45%) ──────────────────────────── */}
         <div style={{ flex: '0 0 45%', borderRadius: 12, border: '1.5px solid #C5E3F7', background: '#fff', overflow: 'auto', padding: '18px 16px' }}>
           <h2 style={{ fontSize: 13, fontWeight: 700, color: '#042C53', marginBottom: 16, marginTop: 0 }}>דוחות מערכת</h2>
+
+          {/* ── Module reports ── */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8, paddingBottom: 5, borderBottom: '1px solid #C5E3F7' }}>
+              <span style={{ color: '#0A5E9A' }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/>
+                </svg>
+              </span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#5B7FA6', textTransform: 'uppercase', letterSpacing: '0.5px' }}>מודולים</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {MODULE_SYSTEM_REPORTS
+                .filter(r => !search || r.name.includes(search))
+                .map(rpt => (
+                  <button key={rpt.id} onClick={() => openCustom(rpt)}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, padding: '10px 12px', borderRadius: 8, border: '1.5px solid #C5E3F7', background: '#F0F7FF', cursor: 'pointer', textAlign: 'right', width: '100%', transition: 'border-color .15s' }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = '#1A91D9'}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = '#C5E3F7'}
+                  >
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#042C53' }}>{rpt.name}</span>
+                    <span style={{ fontSize: 11, color: '#5B7FA6' }}>{rpt.columns.length} עמודות</span>
+                  </button>
+                ))}
+            </div>
+          </div>
 
           {SYSTEM_REPORTS.map(group => {
             const groupReports = search

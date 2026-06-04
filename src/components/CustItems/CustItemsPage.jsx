@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useCustItems, useCreateCustItem, useUpdateCustItem, useDeleteCustItem } from '../../hooks/useCustItems';
 import { useCustomers } from '../../hooks/useCustomers';
 import { useSites } from '../../hooks/useSites';
 import { useFamilies, useProducts } from '../../hooks/useProducts';
-import { CUST_ITEMS_COLUMNS, EMPTY_CUST_ITEM, ITEM_TYPES, STATUS_OPTIONS } from '../../utils/constants';
+import { CUST_ITEMS_COLUMNS, EMPTY_CUST_ITEM, ITEM_TYPES } from '../../utils/constants';
+import { useLookups } from '../../hooks/useLookups';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import DataTable from '../Layout/DataTable';
@@ -12,7 +13,10 @@ import DynamicFieldsConfig, { loadDynFieldsConfig, getFieldsForFamily } from './
 import { Icon, ICONS } from '../../utils/icons';
 import OwnerSelect from '../Layout/OwnerSelect';
 import StatsBar from '../Layout/StatsBar';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import ModuleTopbar from '../Layout/ModuleTopbar';
+import { usePerms } from '../../hooks/usePerms';
+import DeleteConfirmModal from '../Layout/DeleteConfirmModal';
 import '../Layout/EditorPage.css';
 import '../Customers/CustomerModal.css';
 
@@ -25,11 +29,16 @@ const EQUIP_TYPES = [['','— בחר —'],['router','Router'],['switch','Switch
 const CONN_TYPES = [['','— בחר —'],['GPON','GPON'],['Xfiber','Xfiber'],['P2P','P2P'],['other','אחר']];
 
 export default function CustItemsPage() {
+  const navigate = useNavigate();
+  const { canView, canCreate, canEdit, canDelete, canUseButton } = usePerms('custitems');
+  const { customerStatuses } = useLookups();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [customerFilter, setCustomerFilter] = useState('');
   const [siteFilter, setSiteFilter] = useState('');
   const [editItem, setEditItem] = useState(null);
+  const [viewOnly, setViewOnly] = useState(false);
   const [confirmDel, setConfirmDel] = useState(null);
   const [skuSearch, setSkuSearch] = useState('');
   const [skuDrop, setSkuDrop] = useState(false);
@@ -56,6 +65,24 @@ export default function CustItemsPage() {
   const families = famData?.data || [];
   const allProducts = prodData?.data || [];
   const allAgreements = saData?.data || [];
+
+  // Open new/edit/view item from URL (e.g. navigating from customer detail page)
+  useEffect(() => {
+    const isNew = searchParams.get('new');
+    const custId = searchParams.get('customer_id');
+    const editId = searchParams.get('edit');
+    const viewId = searchParams.get('view');
+    if (editId && items.length) {
+      const item = items.find(i => String(i.id) === editId);
+      if (item) { setViewOnly(false); setEditItem({ ...item }); setSkuSearch(item.item_name || item.sku || ''); setSearchParams({}, { replace: true }); }
+    } else if (viewId && items.length) {
+      const item = items.find(i => String(i.id) === viewId);
+      if (item) { setViewOnly(true); setEditItem({ ...item }); setSkuSearch(item.item_name || item.sku || ''); setSearchParams({}, { replace: true }); }
+    } else if (isNew && customers.length) {
+      setEditItem({ ...EMPTY_CUST_ITEM, customer_id: custId || '' });
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, customers, items]); // eslint-disable-line
 
   const getCustName = (id) => customers.find(c => c.id === id)?.company_name || '—';
   const getSiteName = (id) => allSites.find(s => s.id === id)?.site_name || '—';
@@ -139,6 +166,7 @@ export default function CustItemsPage() {
   const handleDelete = async () => {
     if (!confirmDel) return;
     await deleteMut.mutateAsync(confirmDel.id);
+    if (editItem?.id === confirmDel.id) setEditItem(null);
     setConfirmDel(null);
   };
 
@@ -190,17 +218,30 @@ export default function CustItemsPage() {
         <div className="tdb-topbar" style={{ marginBottom: 16 }}>
           <div className="tdb-topbar-left">
             <button className="tdb-calendar-btn" onClick={() => setEditItem(null)}>← חזרה לפריטים</button>
+            {editItem.customer_id && (
+              <button className="tdb-calendar-btn" onClick={() => navigate(`/customers/${editItem.customer_id}`)}>
+                <i className="ti ti-building-store" aria-hidden="true" /> לכרטיס לקוח
+              </button>
+            )}
             <span className="tdb-topbar-icon"><i className="ti ti-package" aria-hidden="true" /></span>
-            <h1 className="tdb-topbar-title">{editItem.id ? 'עריכת פריט ללקוח' : 'פריט חדש ללקוח'}</h1>
+            <h1 className="tdb-topbar-title">{viewOnly ? `צפייה — ${editItem.item_name || ''}` : editItem.id ? 'עריכת פריט ללקוח' : 'פריט חדש ללקוח'}</h1>
+            {viewOnly && <span style={{ fontSize: 11, background: '#FEF3C7', color: '#92400E', border: '1px solid #F59E0B66', borderRadius: 999, padding: '2px 10px', fontWeight: 600 }}>צפייה בלבד</span>}
           </div>
           <div className="tdb-topbar-right">
-            <button className="tdb-calendar-btn" style={{ background: 'rgba(255,255,255,0.9)', color: '#074876', fontWeight: 700 }} onClick={handleSave} disabled={createMut.isPending || updateMut.isPending}>
-              {(createMut.isPending || updateMut.isPending) ? 'שומר...' : 'שמור'}
-            </button>
+            {!viewOnly && editItem.id && canDelete && canUseButton('btn_delete') && (
+              <button className="tdb-calendar-btn" style={{ background: 'rgba(220,38,38,0.18)', borderColor: 'rgba(220,38,38,0.5)' }} onClick={() => setConfirmDel(editItem)}>
+                <i className="ti ti-trash" aria-hidden="true" /> מחק
+              </button>
+            )}
+            {!viewOnly && canUseButton('btn_save') && (
+              <button className="tdb-calendar-btn" style={{ background: 'rgba(255,255,255,0.9)', color: '#074876', fontWeight: 700 }} onClick={handleSave} disabled={createMut.isPending || updateMut.isPending}>
+                {(createMut.isPending || updateMut.isPending) ? 'שומר...' : 'שמור'}
+              </button>
+            )}
           </div>
         </div>
         <div className="card">
-
+          <fieldset disabled={viewOnly} style={{ border: 'none', padding: 0, margin: 0 }}>
               {/* ── חלק ראשון — מידע כללי ── */}
               <h3 className="form-section-title">מידע כללי</h3>
               <div className="form-grid">
@@ -318,7 +359,7 @@ export default function CustItemsPage() {
                 <div className="form-field">
                   <label>סטטוס</label>
                   <select value={editItem.status || 'active'} onChange={e => upd('status', e.target.value)}>
-                    {STATUS_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    {customerStatuses.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                   </select>
                 </div>
                 <div className="form-field">
@@ -505,8 +546,9 @@ export default function CustItemsPage() {
                 );
               })()}
 
-          </div>
+          </fieldset>
         </div>
+      </div>
     </>
   );
 
@@ -514,15 +556,21 @@ export default function CustItemsPage() {
   return (
     <>
       <ModuleTopbar icon="ti-package" title="פריטי לקוח">
-        <button className="tdb-calendar-btn" onClick={() => setShowAutoNameConfig(true)}>
-          <i className="ti ti-settings" aria-hidden="true" /> שם פריט אוטומטי
-        </button>
-        <button className="tdb-calendar-btn" onClick={() => setShowDynFieldsConfig(true)}>
-          <i className="ti ti-list-details" aria-hidden="true" /> שדות דינמיים
-        </button>
-        <button className="tdb-calendar-btn" onClick={() => { setEditItem({ ...EMPTY_CUST_ITEM }); setSkuSearch(''); }} style={{ background: 'rgba(255,255,255,.25)', borderColor: 'rgba(255,255,255,.5)', fontWeight: 700 }}>
-          <i className="ti ti-plus" aria-hidden="true" /> פריט חדש
-        </button>
+        {canUseButton('btn_auto_name') && (
+          <button className="tdb-calendar-btn" onClick={() => setShowAutoNameConfig(true)}>
+            <i className="ti ti-settings" aria-hidden="true" /> שם פריט אוטומטי
+          </button>
+        )}
+        {canUseButton('btn_dynamic_fields') && (
+          <button className="tdb-calendar-btn" onClick={() => setShowDynFieldsConfig(true)}>
+            <i className="ti ti-list-details" aria-hidden="true" /> שדות דינמיים
+          </button>
+        )}
+        {canCreate && canUseButton('btn_new') && (
+          <button className="tdb-calendar-btn" onClick={() => { setEditItem({ ...EMPTY_CUST_ITEM }); setSkuSearch(''); }} style={{ background: 'rgba(255,255,255,.25)', borderColor: 'rgba(255,255,255,.5)', fontWeight: 700 }}>
+            <i className="ti ti-plus" aria-hidden="true" /> פריט חדש
+          </button>
+        )}
       </ModuleTopbar>
       <StatsBar stats={itemStats} />
 
@@ -536,8 +584,9 @@ export default function CustItemsPage() {
         error={error}
         onSearchChange={s => { setSearch(s); setPage(1); }}
         onPageChange={setPage}
-        onEdit={row => { setEditItem({ ...row }); setSkuSearch(row.item_name || row.sku || ''); }}
-        onDelete={row => setConfirmDel(row)}
+        onEdit={canEdit ? row => { setViewOnly(false); setEditItem({ ...row }); setSkuSearch(row.item_name || row.sku || ''); } : undefined}
+        onView={!canEdit && canView ? row => { setViewOnly(true); setEditItem({ ...row }); setSkuSearch(row.item_name || row.sku || ''); } : undefined}
+        onDelete={canDelete ? row => setConfirmDel(row) : undefined}
         renderCell={renderCell}
         storageKey="biz_cust_items_cols_v3"
         hideHeader
@@ -563,16 +612,14 @@ export default function CustItemsPage() {
       />
 
       {confirmDel && (
-        <div className="modal-overlay" onClick={() => setConfirmDel(null)}>
-          <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 400, padding: 24 }}>
-            <h3 style={{ marginBottom: 12 }}>מחיקת פריט</h3>
-            <p style={{ color: 'var(--text-2)', fontSize: 14, marginBottom: 20 }}>האם למחוק את <strong>{confirmDel.item_name}</strong>?</p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn btn-ghost" onClick={() => setConfirmDel(null)}>ביטול</button>
-              <button className="btn btn-danger" onClick={handleDelete} disabled={deleteMut.isPending}>{deleteMut.isPending ? 'מוחק...' : 'מחק'}</button>
-            </div>
-          </div>
-        </div>
+        <DeleteConfirmModal
+          title="מחיקת פריט לקוח"
+          name={confirmDel.item_name}
+          cascade="מחיקת הפריט תסיר אותו לצמיתות מרשימת הפריטים של הלקוח."
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmDel(null)}
+          isPending={deleteMut.isPending}
+        />
       )}
 
       {showAutoNameConfig && <AutoNameConfig onClose={() => { setShowAutoNameConfig(false); setAutoNameCfg(loadAutoNameConfig()); }} />}

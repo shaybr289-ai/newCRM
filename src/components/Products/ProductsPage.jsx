@@ -12,14 +12,18 @@ import DataTable from '../Layout/DataTable';
 import OwnerSelect from '../Layout/OwnerSelect';
 import StatsBar from '../Layout/StatsBar';
 import ModuleTopbar from '../Layout/ModuleTopbar';
+import { usePerms } from '../../hooks/usePerms';
+import DeleteConfirmModal from '../Layout/DeleteConfirmModal';
 import '../Layout/EditorPage.css';
 import '../Customers/CustomerModal.css';
 
 export default function ProductsPage() {
+  const { canView, canCreate, canEdit, canDelete, canUseButton } = usePerms('products');
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [filterFamilyId, setFilterFamilyId] = useState('');
   const [editItem, setEditItem] = useState(null);
+  const [viewOnly, setViewOnly] = useState(false);
   const [confirmDel, setConfirmDel] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkConfirm, setBulkConfirm] = useState(false);
@@ -143,6 +147,7 @@ export default function ProductsPage() {
   const handleDelete = async () => {
     if (!confirmDel) return;
     await deleteMut.mutateAsync(confirmDel.id);
+    if (editItem?.id === confirmDel.id) setEditItem(null);
     setConfirmDel(null);
   };
 
@@ -353,15 +358,21 @@ export default function ProductsPage() {
     <>
       {!editItem && (<>
       <ModuleTopbar icon="ti-barcode" title='מק"טים'>
-        <button className="tdb-calendar-btn" onClick={handleExport}>
-          <i className="ti ti-table-export" aria-hidden="true" /> יצוא Excel
-        </button>
-        <button className="tdb-calendar-btn" onClick={() => { setShowImport(p => !p); setImportStep(1); setImportResult(null); }}>
-          <i className="ti ti-table-import" aria-hidden="true" /> ייבוא מוצרים
-        </button>
-        <button className="tdb-calendar-btn" onClick={() => { setEditItem({ ...EMPTY_PRODUCT }); setMfrInput(''); }} style={{ background: 'rgba(255,255,255,.25)', borderColor: 'rgba(255,255,255,.5)', fontWeight: 700 }}>
-          <i className="ti ti-plus" aria-hidden="true" /> מק"ט חדש
-        </button>
+        {canUseButton('btn_export') && (
+          <button className="tdb-calendar-btn" onClick={handleExport}>
+            <i className="ti ti-table-export" aria-hidden="true" /> יצוא Excel
+          </button>
+        )}
+        {canUseButton('btn_import') && (
+          <button className="tdb-calendar-btn" onClick={() => { setShowImport(p => !p); setImportStep(1); setImportResult(null); }}>
+            <i className="ti ti-table-import" aria-hidden="true" /> ייבוא מוצרים
+          </button>
+        )}
+        {canCreate && canUseButton('btn_new') && (
+          <button className="tdb-calendar-btn" onClick={() => { setViewOnly(false); setEditItem({ ...EMPTY_PRODUCT }); setMfrInput(''); }} style={{ background: 'rgba(255,255,255,.25)', borderColor: 'rgba(255,255,255,.5)', fontWeight: 700 }}>
+            <i className="ti ti-plus" aria-hidden="true" /> מק"ט חדש
+          </button>
+        )}
       </ModuleTopbar>
       <StatsBar stats={prodStats} />
 
@@ -472,8 +483,9 @@ export default function ProductsPage() {
         error={error}
         onSearchChange={s => { setSearch(s); setPage(1); }}
         onPageChange={setPage}
-        onEdit={row => { setEditItem({ ...row }); setMfrInput(row.mfr_name || ''); }}
-        onDelete={row => setConfirmDel(row)}
+        onEdit={canEdit ? row => { setViewOnly(false); setEditItem({ ...row }); setMfrInput(row.mfr_name || ''); } : undefined}
+        onView={!canEdit && canView ? row => { setViewOnly(true); setEditItem({ ...row }); setMfrInput(row.mfr_name || ''); } : undefined}
+        onDelete={canDelete ? row => setConfirmDel(row) : undefined}
         renderCell={(row, key) => {
           if (key === PRODUCTS_COLUMNS[0].key) {
             // Add checkbox before first column
@@ -523,20 +535,29 @@ export default function ProductsPage() {
             <div className="tdb-topbar-left">
               <button className="tdb-calendar-btn" onClick={() => setEditItem(null)}>← חזרה למוצרים</button>
               <span className="tdb-topbar-icon"><i className="ti ti-box" aria-hidden="true" /></span>
-              <h1 className="tdb-topbar-title">{editItem.id ? `עריכת מוצר — ${editItem.name || ''}` : 'מוצר חדש'}</h1>
+              <h1 className="tdb-topbar-title">{viewOnly ? `צפייה — ${editItem.name || ''}` : editItem.id ? `עריכת מוצר — ${editItem.name || ''}` : 'מוצר חדש'}</h1>
+              {viewOnly && <span style={{ fontSize: 11, background: '#FEF3C7', color: '#92400E', border: '1px solid #F59E0B66', borderRadius: 999, padding: '2px 10px', fontWeight: 600 }}>צפייה בלבד</span>}
             </div>
             <div className="tdb-topbar-right">
-              {editItem.id && (
+              {!viewOnly && editItem.id && canUseButton('btn_movements') && (
                 <button className="tdb-calendar-btn" onClick={() => setShowMovements(true)}>
                   <i className="ti ti-chart-bar" aria-hidden="true" /> תנועות מלאי לפריט
                 </button>
               )}
-              <button className="tdb-calendar-btn" style={{ background: 'rgba(255,255,255,0.9)', color: '#074876', fontWeight: 700 }} onClick={handleSave} disabled={createMut.isPending || updateMut.isPending}>
-                {(createMut.isPending || updateMut.isPending) ? 'שומר...' : 'שמור'}
-              </button>
+              {!viewOnly && editItem.id && canDelete && canUseButton('btn_delete') && (
+                <button className="tdb-calendar-btn" style={{ background: 'rgba(220,38,38,0.18)', borderColor: 'rgba(220,38,38,0.5)' }} onClick={() => setConfirmDel(editItem)}>
+                  <i className="ti ti-trash" aria-hidden="true" /> מחק
+                </button>
+              )}
+              {!viewOnly && canUseButton('btn_save') && (
+                <button className="tdb-calendar-btn" style={{ background: 'rgba(255,255,255,0.9)', color: '#074876', fontWeight: 700 }} onClick={handleSave} disabled={createMut.isPending || updateMut.isPending}>
+                  {(createMut.isPending || updateMut.isPending) ? 'שומר...' : 'שמור'}
+                </button>
+              )}
             </div>
           </div>
           <div className="card">
+          <fieldset disabled={viewOnly} style={{ border: 'none', padding: 0, margin: 0 }}>
               {/* Basic */}
               <div className="form-grid">
                 <div className="form-field">
@@ -606,6 +627,22 @@ export default function ProductsPage() {
                   <label>יחידת שימוש</label>
                   <input value={editItem.unit_of_use || ''} onChange={e => upd('unit_of_use', e.target.value)} placeholder={'יח\', ק"ג, מטר...'} />
                 </div>
+                <div className="form-field">
+                  <label>תאריך קנייה אחרון</label>
+                  <input type="date" value={editItem.last_purchase_date ? String(editItem.last_purchase_date).split('T')[0] : ''} onChange={e => upd('last_purchase_date', e.target.value)} dir="ltr" />
+                </div>
+                <div className="form-field">
+                  <label>תחילת מבצע</label>
+                  <input type="date" value={editItem.sale_start_date ? String(editItem.sale_start_date).split('T')[0] : ''} onChange={e => upd('sale_start_date', e.target.value)} dir="ltr" />
+                </div>
+                <div className="form-field">
+                  <label>סיום מבצע</label>
+                  <input type="date" value={editItem.sale_end_date ? String(editItem.sale_end_date).split('T')[0] : ''} onChange={e => upd('sale_end_date', e.target.value)} dir="ltr" />
+                </div>
+                <div className="form-field">
+                  <label>תאריך הזנת מבצע</label>
+                  <input type="date" value={editItem.sale_entry_date ? String(editItem.sale_entry_date).split('T')[0] : ''} onChange={e => upd('sale_entry_date', e.target.value)} dir="ltr" />
+                </div>
               </div>
 
               <h3 className="form-section-title">יצרן וספק</h3>
@@ -643,7 +680,7 @@ export default function ProductsPage() {
                   <label>מק"ט ספק</label>
                   <input value={editItem.supplier_sku || ''} onChange={e => upd('supplier_sku', e.target.value)} dir="ltr" />
                 </div>
-                <OwnerSelect value={editItem.created_by} onChange={v => upd('created_by', v)} />
+                <OwnerSelect value={editItem.created_by} onChange={v => upd('created_by', v)} label="בעלי רשומה מוצר" />
               </div>
 
               <div className="form-field" style={{ marginTop: 12 }}>
@@ -651,26 +688,21 @@ export default function ProductsPage() {
                 <textarea value={editItem.description || ''} onChange={e => upd('description', e.target.value)} rows={3} />
               </div>
 
+          </fieldset>
           </div>
         </div>
       )}
 
       {/* Delete Confirm */}
       {confirmDel && (
-        <div className="modal-overlay" onClick={() => setConfirmDel(null)}>
-          <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 400, padding: 24 }}>
-            <h3 style={{ marginBottom: 12 }}>מחיקת מוצר</h3>
-            <p style={{ color: 'var(--text-2)', fontSize: 14, marginBottom: 20 }}>
-              האם למחוק את <strong>{confirmDel.name}</strong>?
-            </p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn btn-ghost" onClick={() => setConfirmDel(null)}>ביטול</button>
-              <button className="btn btn-danger" onClick={handleDelete} disabled={deleteMut.isPending}>
-                {deleteMut.isPending ? 'מוחק...' : 'מחק'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <DeleteConfirmModal
+          title="מחיקת מוצר"
+          name={confirmDel.name}
+          cascade="מחיקת המוצר תשפיע על כל הרשומות המשויכות אליו: פריטי לקוח, שורות בהצעות מחיר והזמנות."
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmDel(null)}
+          isPending={deleteMut.isPending}
+        />
       )}
 
       {/* Inventory movements modal */}

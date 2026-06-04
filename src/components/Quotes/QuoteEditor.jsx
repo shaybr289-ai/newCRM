@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
-import { useCreateQuote, useUpdateQuote } from '../../hooks/useQuotes';
+import { useCreateQuote, useUpdateQuote, useDeleteQuote } from '../../hooks/useQuotes';
 import { useCustomers } from '../../hooks/useCustomers';
 import { useContacts } from '../../hooks/useContacts';
 import { useDeals } from '../../hooks/useDeals';
@@ -13,16 +13,19 @@ import { QUOTE_STAGES, QUOTE_STATUSES, QUOTE_TYPES, STAGE_COLORS, EMPTY_QUOTE, m
 import { Icon, ICONS } from '../../utils/icons';
 import OwnerSelect from '../Layout/OwnerSelect';
 import useAuthStore from '../../store/authStore';
+import { usePerms } from '../../hooks/usePerms';
 import QuotePreviewModal, { buildPreviewHTML } from './QuotePreview';
 import ScreenDesignerModal, { useScreenMeta } from './ScreenDesigner';
 import SendQuoteModal from './SendQuoteModal';
 import { useConvertQuoteToOrder } from '../../hooks/useOrders';
+import DeleteConfirmModal from '../Layout/DeleteConfirmModal';
 import './QuoteEditor.css';
 import '../Tasks/TasksDashboard.css';
 
 export default function QuoteEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const isNew = !id || id === 'new';
 
   // Fetch existing quote
@@ -61,9 +64,11 @@ export default function QuoteEditor() {
 
   const createMut = useCreateQuote();
   const updateMut = useUpdateQuote();
+  const deleteMut = useDeleteQuote();
 
   // Form state
   const [form, setForm] = useState(null);
+  const [confirmDel, setConfirmDel] = useState(false);
   const [items, setItems] = useState([]);
   const [activeSection, setActiveSection] = useState('info');
   const [vatRate] = useState(18);
@@ -71,33 +76,44 @@ export default function QuoteEditor() {
   const [showScreenDesigner, setShowScreenDesigner] = useState(false);
   const [showSendEmail, setShowSendEmail] = useState(false);
   const authUser = useAuthStore(s => s.user);
-  // Show internal cost column for admin/superAdmin users (can be refined per profile)
-  const canViewCost = authUser?.userType === 'superAdmin' || authUser?.userType === 'admin';
+  const { canDelete, canEditFields, canUseButton } = usePerms('quotes');
+  const canViewCost = canEditFields;
+  const viewOnly = searchParams.get('viewOnly') === '1';
   const [initialized, setInitialized] = useState(false);
   const [screenMetaVer, setScreenMetaVer] = useState(0);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const screenMeta = useMemo(() => useScreenMeta('quotes'), [screenMetaVer]);
 
-  // Initialize form
-  if (!initialized) {
+  // Initialize form for new quotes
+  useEffect(() => {
     if (isNew) {
-      setForm({ ...EMPTY_QUOTE });
+      const custId = searchParams.get('customer_id') || '';
+      const dealId = searchParams.get('deal_id') || null;
+      const dealName = searchParams.get('deal_name') || '';
+      setForm({
+        ...EMPTY_QUOTE,
+        customer_id: custId,
+        ...(dealId ? { deal_id: dealId, deal_name: dealName } : {}),
+      });
       setItems([mkEmptyItem()]);
       setInitialized(true);
-    } else if (existingQuote) {
-      // Parse JSONB fields that may come as strings from DB
+    }
+  }, [isNew]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Initialize form for existing quotes — wait for BOTH quote and items to load
+  useEffect(() => {
+    if (!isNew && !initialized && existingQuote && existingItems !== undefined) {
       const q = { ...existingQuote };
       if (typeof q.cond_overrides === 'string') try { q.cond_overrides = JSON.parse(q.cond_overrides); } catch { q.cond_overrides = {}; }
       if (typeof q.cond_order === 'string') try { q.cond_order = JSON.parse(q.cond_order); } catch { q.cond_order = []; }
       if (typeof q.images === 'string') try { q.images = JSON.parse(q.images); } catch { q.images = []; }
-      // Map snake_case to camelCase for condOverrides
       q.condOverrides = q.cond_overrides || q.condOverrides || {};
-      // Normalize date fields to yyyy-MM-dd
       ['quote_date', 'valid_until'].forEach(k => {
         if (q[k] && q[k].includes('T')) q[k] = q[k].split('T')[0];
       });
       setForm(q);
-      setItems((existingItems?.data || []).map(it => ({
+      const rawItems = existingItems?.data || [];
+      setItems(rawItems.map(it => ({
         id: it.id || 'qi' + Date.now() + Math.random().toString(36).slice(2),
         productName: it.product_name || it.productName || '',
         sku: it.sku || '',
@@ -113,7 +129,7 @@ export default function QuoteEditor() {
       })));
       setInitialized(true);
     }
-  }
+  }, [isNew, initialized, existingQuote, existingItems]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Contacts filtered by customer
   const { data: contactsData } = useContacts({ customerId: form?.customer_id || '', limit: 200 });
@@ -214,9 +230,8 @@ export default function QuoteEditor() {
       if (isNew) {
         const result = await createMut.mutateAsync(saveData);
         savedId = result?.id;
-        if (items.length > 0 && savedId) {
-          await api.post(`/api/quotes/${savedId}/items`, { items });
-        }
+        if (!savedId) throw new Error('לא התקבל מזהה הצעה מהשרת');
+        await api.post(`/api/quotes/${savedId}/items`, { items });
       } else {
         await updateMut.mutateAsync({ id, ...saveData });
         await api.post(`/api/quotes/${id}/items`, { items });
@@ -248,27 +263,48 @@ export default function QuoteEditor() {
       <div className="tdb-topbar" style={{ marginBottom: 16 }}>
         <div className="tdb-topbar-left">
           <Link to="/quotes" className="tdb-calendar-btn" style={{ textDecoration: 'none' }}>← חזרה להצעות</Link>
+          {form.customer_id && (
+            <button className="tdb-calendar-btn" onClick={() => navigate(`/customers/${form.customer_id}`)}>
+              <i className="ti ti-building-store" aria-hidden="true" /> לכרטיס לקוח
+            </button>
+          )}
           <span className="tdb-topbar-icon"><i className="ti ti-file-invoice" aria-hidden="true" /></span>
           <div>
             <h1 className="tdb-topbar-title">{isNew ? 'הצעת מחיר חדשה' : `עריכת הצעה — ${form.quote_name || ''}`}</h1>
             {form.quote_num && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 1 }}>#{form.quote_num}</div>}
           </div>
+          {viewOnly && <span style={{ fontSize: 11, background: '#FEF3C7', color: '#92400E', border: '1px solid #F59E0B66', borderRadius: 999, padding: '2px 10px', fontWeight: 600 }}>צפייה בלבד</span>}
         </div>
         <div className="tdb-topbar-right">
-          {form.customer_id && (
+          {!viewOnly && form.customer_id && canUseButton('btn_relation_map') && (
             <button className="tdb-calendar-btn" onClick={() => navigate(`/customers/${form.customer_id}/relations`)}>
               <i className="ti ti-hierarchy" aria-hidden="true" /> מפת קשרים
             </button>
           )}
-          <button className="tdb-calendar-btn" onClick={() => setShowScreenDesigner(true)} title="עיצוב מסך — ערוך שדות, סדר וערכים">
-            <i className="ti ti-tool" aria-hidden="true" /> ערוך שדות
-          </button>
-          <button className="tdb-calendar-btn" onClick={() => setShowPreview(true)}>תצוגה מקדימה</button>
-          <button className="tdb-calendar-btn" onClick={() => setShowSendEmail(true)} disabled={isNew}>שלח הצעת מחיר</button>
-          <ConvertToOrderButton isNew={isNew} quoteId={form?.id} stage={form?.stage} itemsCount={(items || []).length} onSaveFirst={handleSave} isSaving={createMut.isPending || updateMut.isPending} />
-          <button className="tdb-calendar-btn" style={{ background: 'rgba(255,255,255,0.9)', color: '#074876', fontWeight: 700 }} onClick={handleSave} disabled={createMut.isPending || updateMut.isPending}>
-            {(createMut.isPending || updateMut.isPending) ? 'שומר...' : 'שמור'}
-          </button>
+          {!viewOnly && canEditFields && canUseButton('btn_edit_fields') && (
+            <button className="tdb-calendar-btn" onClick={() => setShowScreenDesigner(true)} title="עיצוב מסך — ערוך שדות, סדר וערכים">
+              <i className="ti ti-tool" aria-hidden="true" /> ערוך שדות
+            </button>
+          )}
+          {canUseButton('btn_preview') && (
+            <button className="tdb-calendar-btn" onClick={() => setShowPreview(true)}>תצוגה מקדימה</button>
+          )}
+          {!viewOnly && canUseButton('btn_send') && (
+            <button className="tdb-calendar-btn" onClick={() => setShowSendEmail(true)} disabled={isNew}>שלח הצעת מחיר</button>
+          )}
+          {!viewOnly && canUseButton('btn_convert') && (
+            <ConvertToOrderButton isNew={isNew} quoteId={form?.id} stage={form?.stage} itemsCount={(items || []).length} onSaveFirst={handleSave} isSaving={createMut.isPending || updateMut.isPending} />
+          )}
+          {!viewOnly && !isNew && canDelete && canUseButton('btn_delete') && (
+            <button className="tdb-calendar-btn" style={{ background: 'rgba(220,38,38,0.18)', borderColor: 'rgba(220,38,38,0.5)' }} onClick={() => setConfirmDel(true)}>
+              <i className="ti ti-trash" aria-hidden="true" /> מחק
+            </button>
+          )}
+          {!viewOnly && canUseButton('btn_save') && (
+            <button className="tdb-calendar-btn" style={{ background: 'rgba(255,255,255,0.9)', color: '#074876', fontWeight: 700 }} onClick={handleSave} disabled={createMut.isPending || updateMut.isPending}>
+              {(createMut.isPending || updateMut.isPending) ? 'שומר...' : 'שמור'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -286,6 +322,7 @@ export default function QuoteEditor() {
         ))}
       </div>
 
+      <fieldset disabled={viewOnly} style={{ border: 'none', padding: 0, margin: 0 }}>
       <div className="qe-body card">
         {/* ── INFO SECTION ───────────────────────────────────────────── */}
         {activeSection === 'info' && (
@@ -694,6 +731,7 @@ export default function QuoteEditor() {
           </div>
         )}
       </div>
+      </fieldset>
       {/* Screen Designer Modal */}
       {showScreenDesigner && (
         <ScreenDesignerModal moduleId="quotes" onClose={() => { setShowScreenDesigner(false); setScreenMetaVer(v => v + 1); }} />
@@ -731,6 +769,16 @@ export default function QuoteEditor() {
             vatRate,
           })}
           onClose={() => setShowPreview(false)}
+        />
+      )}
+      {confirmDel && (
+        <DeleteConfirmModal
+          title="מחיקת הצעת מחיר"
+          name={form.quote_name || form.quote_num}
+          cascade="מחיקת הצעת המחיר תסיר אותה לצמיתות, כולל כל שורות הפריטים המשויכות אליה."
+          onConfirm={async () => { await deleteMut.mutateAsync(form.id); navigate('/quotes'); }}
+          onCancel={() => setConfirmDel(false)}
+          isPending={deleteMut.isPending}
         />
       )}
     </div>

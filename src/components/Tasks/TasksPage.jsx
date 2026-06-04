@@ -11,6 +11,7 @@ import { useCustomers } from '../../hooks/useCustomers';
 import { useContacts } from '../../hooks/useContacts';
 import { useSites } from '../../hooks/useSites';
 import useAuthStore from '../../store/authStore';
+import { usePerms } from '../../hooks/usePerms';
 import { api } from '../../api/client';
 import { Icon, ICONS } from '../../utils/icons';
 import TaskFormsSection from './TaskFormsSection';
@@ -81,14 +82,15 @@ const TASKS_COLUMNS = [
   { key: 'status',         label: 'סטטוס',       section: 'כללי',     defaultVisible: true,  sortable: true,  sortField: 'status'            },
   { key: 'created_at',     label: 'נוצר',        section: 'תאריכים', defaultVisible: false, sortable: true,  sortField: 'created_at'        },
   { key: 'description',    label: 'תיאור',       section: 'כללי',     defaultVisible: false, sortable: false                                  },
-  { key: '_delete_action', label: 'מחיקה',       section: 'כללי',     defaultVisible: true,  sortable: false                                  },
 ];
 
 export default function TasksPage() {
   const navigate = useNavigate();
+  const { canView, canCreate, canEdit, canDelete } = usePerms('tasks');
   const [searchParams, setSearchParams] = useSearchParams();
   const [view, setView] = useState('tasks'); // 'tasks' | 'templates'
   const [editItem, setEditItem] = useState(null);
+  const [taskViewOnly, setTaskViewOnly] = useState(false);
   const [confirmDel, setConfirmDel] = useState(null);
   const [search, setSearch] = useState('');
   const [showSettings, setShowSettings] = useState(false);
@@ -171,12 +173,13 @@ export default function TasksPage() {
     }));
   }, [allTasks, empFilter, statusFilter, customerFilter, customers, users]);
 
-  // Open task editor from URL (?edit=<id>)
+  // Open task editor from URL (?edit=<id>&viewOnly=1)
   useEffect(() => {
     const editId = searchParams.get('edit');
+    const viewOnlyParam = searchParams.get('viewOnly') === '1';
     if (editId && allTasks.length) {
       const t = allTasks.find(x => x.id === editId);
-      if (t) { setEditItem(t); setSearchParams({}, { replace: true }); }
+      if (t) { setTaskViewOnly(viewOnlyParam); setEditItem(t); setSearchParams({}, { replace: true }); }
     }
   }, [searchParams, allTasks]);
 
@@ -191,7 +194,8 @@ export default function TasksPage() {
 
   // Open new task editor from URL (?new=1)
   useEffect(() => {
-    if (searchParams.get('new') === '1') {
+    if (searchParams.get('new') === '1' && canCreate) {
+      setTaskViewOnly(false);
       setEditItem({ subject: '', description: '', notes: '', customer_id: '', due_date: '', start_time: '', status: 'new', assignee_ids: [], contact_ids: [] });
       setSearchParams({}, { replace: true });
     }
@@ -229,7 +233,7 @@ export default function TasksPage() {
   };
 
   if (editItem) {
-    return <TaskEditor task={editItem} users={users} customers={customers} statusList={statusList} statusDefs={statusDefs} onClose={() => setEditItem(null)} />;
+    return <TaskEditor task={editItem} users={users} customers={customers} statusList={statusList} statusDefs={statusDefs} onClose={() => setEditItem(null)} viewOnly={taskViewOnly} />;
   }
 
   if (view === 'templates') {
@@ -253,22 +257,6 @@ export default function TasksPage() {
       );
       case 'created_at':  return <span style={{ fontSize: 11, color: FO.TEXT_MUTED }}>{new Date(t.created_at).toLocaleDateString('he-IL')}</span>;
       case 'description': return <span style={{ fontSize: 12, color: FO.TEXT_MUTED, maxWidth: 240, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.description || '—'}</span>;
-      case '_delete_action': return (
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); setConfirmDel(t); }}
-          style={{
-            padding: '5px 12px', borderRadius: 7,
-            border: '1.5px solid #EF4444', background: '#FFF5F5',
-            color: '#DC2626', fontSize: 12, fontWeight: 700,
-            cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          <i className="ti ti-trash" aria-hidden="true" style={{ fontSize: 13 }} />
-          מחק
-        </button>
-      );
       default: return null;
     }
   };
@@ -302,7 +290,7 @@ export default function TasksPage() {
           </button>
           <button
             className="tdb-calendar-btn"
-            onClick={() => setEditItem({ subject: '', description: '', notes: '', customer_id: '', due_date: '', start_time: '', status: 'new', assignee_ids: [], contact_ids: [] })}
+            onClick={() => { setTaskViewOnly(false); setEditItem({ subject: '', description: '', notes: '', customer_id: '', due_date: '', start_time: '', status: 'new', assignee_ids: [], contact_ids: [] }); }}
             style={{ background: FO.B600, color: '#fff', borderColor: FO.B600 }}
           >
             <i className="ti ti-plus" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> משימה חדשה
@@ -442,7 +430,9 @@ export default function TasksPage() {
         isLoading={isLoading}
         search={search}
         onSearchChange={setSearch}
-        onEdit={setEditItem}
+        onEdit={canEdit ? row => { setTaskViewOnly(false); setEditItem(row); } : undefined}
+        onView={!canEdit && canView ? row => { setTaskViewOnly(true); setEditItem(row); } : undefined}
+        onDelete={canDelete ? row => setConfirmDel(row) : undefined}
         renderCell={renderCell}
         storageKey="tasks_visible_cols"
         defaultSort={{ key: 'task_num', dir: 'desc' }}
@@ -456,7 +446,7 @@ export default function TasksPage() {
 }
 
 // ── Task Editor (full page) ──
-function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STATUSES_LIST, statusDefs = TASK_STATUSES_MAP, onClose }) {
+function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STATUSES_LIST, statusDefs = TASK_STATUSES_MAP, onClose, viewOnly = false }) {
   const navigate = useNavigate();
   const currentUser = useAuthStore(s => s.user);
   const [form, setForm] = useState({
@@ -631,17 +621,28 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
 
   return (
     <div className="animate-in">
-      <div className="editor-topbar">
-        <button className="btn btn-ghost" onClick={() => navigate('/tasks/dashboard')}><Icon svg={ICONS.back} size={16} /> חזרה</button>
-        <div className="editor-topbar-title">
-          <h1>{form.id ? `עריכת משימה — ${initialTask.task_num || ''}` : 'משימה חדשה'}</h1>
+      <div className="tdb-topbar">
+        <div className="tdb-topbar-left">
+          <span className="tdb-topbar-icon"><i className="ti ti-checkbox" aria-hidden="true" /></span>
+          <h1 className="tdb-topbar-title">{viewOnly ? `צפייה — ${initialTask.task_num || ''}` : form.id ? `עריכת משימה — ${initialTask.task_num || ''}` : 'משימה חדשה'}</h1>
+          {viewOnly && <span style={{ fontSize: 11, background: '#FEF3C7', color: '#92400E', border: '1px solid #F59E0B66', borderRadius: 999, padding: '2px 10px', fontWeight: 600 }}>צפייה בלבד</span>}
         </div>
-        <button className="btn btn-primary" onClick={handleSave}
-          disabled={createMut.isPending || updateMut.isPending || saveActsMut.isPending}>
-          {(createMut.isPending || updateMut.isPending || saveActsMut.isPending) ? 'שומר...' : 'שמור'}
-        </button>
+        <div className="tdb-topbar-right">
+          <button className="tdb-calendar-btn" onClick={onClose}>
+            <i className="ti ti-arrow-right" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> חזרה
+          </button>
+          {!viewOnly && (
+            <button className="tdb-calendar-btn" onClick={handleSave}
+              disabled={createMut.isPending || updateMut.isPending || saveActsMut.isPending}
+              style={{ background: FO.B600, color: '#fff', borderColor: FO.B600 }}>
+              <i className="ti ti-device-floppy" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} />
+              {(createMut.isPending || updateMut.isPending || saveActsMut.isPending) ? 'שומר...' : 'שמור'}
+            </button>
+          )}
+        </div>
       </div>
 
+      <fieldset disabled={viewOnly} style={{ border: 'none', padding: 0, margin: 0 }}>
       <div className="card">
         <h3 className="form-section-title">פרטי משימה</h3>
         <div className="form-grid">
@@ -1082,6 +1083,7 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
           )}
         </div>
       </div>
+      </fieldset>
     </div>
   );
 }

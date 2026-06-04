@@ -15,10 +15,12 @@ import SendDeliveryNoteModal from './SendDeliveryNoteModal';
 import { buildDeliveryNoteHTML } from './DeliveryNotePreview';
 import { useCompanyInfo } from '../../hooks/useDataManagement';
 import { getAccessToken } from '../../api/client';
+import { usePerms } from '../../hooks/usePerms';
 import '../Layout/EditorPage.css';
 import '../Customers/CustomerModal.css';
 
 export default function DeliveryNotesPage() {
+  const { canView, canCreate, canEdit, canDelete, canUseButton } = usePerms('deliverynotes');
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -27,6 +29,7 @@ export default function DeliveryNotesPage() {
   const [customerFilter, setCustomerFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [editItem, setEditItem] = useState(null);
+  const [viewOnly, setViewOnly] = useState(false);
   const [confirmDel, setConfirmDel] = useState(null);
   const [showSignature, setShowSignature] = useState(false);
   const [showSendEmail, setShowSendEmail] = useState(false);
@@ -149,12 +152,18 @@ export default function DeliveryNotesPage() {
     }
   }, [itemsData, editItem?.id]);
 
-  // Open edit from URL
+  // Open edit/new from URL
   useEffect(() => {
     const editId = searchParams.get('edit');
+    const isNew = searchParams.get('new');
+    const custId = searchParams.get('customer_id');
+    const viewOnlyParam = searchParams.get('viewOnly') === '1';
     if (editId && notes.length) {
       const n = notes.find(x => x.id === editId);
-      if (n) { setEditItem({ ...n }); setSearchParams({}, { replace: true }); }
+      if (n) { setViewOnly(viewOnlyParam); setEditItem({ ...n }); setSearchParams({}, { replace: true }); }
+    } else if (isNew) {
+      setEditItem({ ...EMPTY_DELIVERY_NOTE, customer_id: custId || '' });
+      setSearchParams({}, { replace: true });
     }
   }, [searchParams, notes]);
 
@@ -278,11 +287,19 @@ export default function DeliveryNotesPage() {
       <div className="tdb-topbar" style={{ marginBottom: 16 }}>
         <div className="tdb-topbar-left">
           <button className="tdb-calendar-btn" onClick={() => setEditItem(null)}>← חזרה לתעודות</button>
+          {editItem.customer_id && (
+            <button className="tdb-calendar-btn" onClick={() => navigate(`/customers/${editItem.customer_id}`)}>
+              <i className="ti ti-building-store" aria-hidden="true" /> לכרטיס לקוח
+            </button>
+          )}
           <span className="tdb-topbar-icon"><i className="ti ti-truck" aria-hidden="true" /></span>
-          <h1 className="tdb-topbar-title">{`${isReturn ? 'תעודת החזרה' : 'תעודת משלוח'} ${editItem.note_num ? '— ' + editItem.note_num : ''}`}</h1>
+          <h1 className="tdb-topbar-title">
+            {viewOnly ? `צפייה — ${editItem.note_num || ''}` : `${isReturn ? 'תעודת החזרה' : 'תעודת משלוח'} ${editItem.note_num ? '— ' + editItem.note_num : ''}`}
+            {viewOnly && <span style={{ marginRight: 8, fontSize: 11, background: '#F59E0B', color: '#fff', borderRadius: 20, padding: '2px 10px', fontWeight: 600, verticalAlign: 'middle' }}>צפייה בלבד</span>}
+          </h1>
         </div>
         <div className="tdb-topbar-right">
-          {editItem.customer_id && (
+          {!viewOnly && canUseButton('btn_relation_map') && editItem.customer_id && (
             <button className="tdb-calendar-btn" onClick={() => navigate(`/customers/${editItem.customer_id}/relations`)}>
               <i className="ti ti-hierarchy" aria-hidden="true" /> מפת קשרים
             </button>
@@ -292,19 +309,26 @@ export default function DeliveryNotesPage() {
               <i className="ti ti-package" aria-hidden="true" /> החל תנועות מלאי
             </button>
           )}
-          <button className="tdb-calendar-btn" onClick={handlePdfPreview} disabled={generatingPdf || !editItem.customer_id}>
-            {generatingPdf ? 'מכין PDF...' : <><i className="ti ti-file" aria-hidden="true" /> תצוגה מקדימה</>}
-          </button>
-          <button className="tdb-calendar-btn" onClick={handleOpenEmail} disabled={!editItem.id || !editItem.customer_id}>
-            <i className="ti ti-mail" aria-hidden="true" /> שלח במייל
-          </button>
-          <button className="tdb-calendar-btn" style={{ background: 'rgba(255,255,255,0.9)', color: '#074876', fontWeight: 700 }} onClick={handleSave} disabled={updateMut.isPending}>
-            {updateMut.isPending ? 'שומר...' : 'שמור'}
-          </button>
+          {canUseButton('btn_preview') && (
+            <button className="tdb-calendar-btn" onClick={handlePdfPreview} disabled={generatingPdf || !editItem.customer_id}>
+              {generatingPdf ? 'מכין PDF...' : <><i className="ti ti-file" aria-hidden="true" /> תצוגה מקדימה</>}
+            </button>
+          )}
+          {!viewOnly && canUseButton('btn_send') && (
+            <button className="tdb-calendar-btn" onClick={handleOpenEmail} disabled={!editItem.id || !editItem.customer_id}>
+              <i className="ti ti-mail" aria-hidden="true" /> שלח במייל
+            </button>
+          )}
+          {!viewOnly && canUseButton('btn_save') && (
+            <button className="tdb-calendar-btn" style={{ background: 'rgba(255,255,255,0.9)', color: '#074876', fontWeight: 700 }} onClick={handleSave} disabled={updateMut.isPending}>
+              {updateMut.isPending ? 'שומר...' : 'שמור'}
+            </button>
+          )}
         </div>
       </div>
 
       <div className="card">
+        <fieldset disabled={viewOnly} style={{ border: 'none', padding: 0, margin: 0 }}>
         <h3 className="form-section-title">פרטי תעודה</h3>
         <div className="form-grid">
           <div className="form-field">
@@ -488,6 +512,7 @@ export default function DeliveryNotesPage() {
         <div className="form-field">
           <textarea value={editItem.notes || ''} onChange={e => upd('notes', e.target.value)} rows={3} placeholder="הערות על המשלוח..." />
         </div>
+        </fieldset>
       </div>
 
       {showSendEmail && (
@@ -521,9 +546,11 @@ export default function DeliveryNotesPage() {
   return (
     <>
       <ModuleTopbar icon="ti-truck" title="תעודות משלוח">
-        <button className="tdb-calendar-btn" onClick={() => setEditItem({ ...EMPTY_DELIVERY_NOTE })} style={{ background: 'rgba(255,255,255,.25)', borderColor: 'rgba(255,255,255,.5)', fontWeight: 700 }}>
-          <i className="ti ti-plus" aria-hidden="true" /> תעודה חדשה
-        </button>
+        {canUseButton('btn_new') && (
+          <button className="tdb-calendar-btn" onClick={() => { setViewOnly(false); setEditItem({ ...EMPTY_DELIVERY_NOTE }); }} style={{ background: 'rgba(255,255,255,.25)', borderColor: 'rgba(255,255,255,.5)', fontWeight: 700 }}>
+            <i className="ti ti-plus" aria-hidden="true" /> תעודה חדשה
+          </button>
+        )}
       </ModuleTopbar>
       {filterOrderId && (
         <div style={{
@@ -567,7 +594,9 @@ export default function DeliveryNotesPage() {
       </div>
       <DataTable columns={DELIVERY_NOTES_COLUMNS} data={filteredNotes} total={data?.total || 0} page={page} totalPages={data?.totalPages || 1}
         isLoading={isLoading} error={error} onSearchChange={s => { setSearch(s); setPage(1); }} onPageChange={setPage}
-        onEdit={row => setEditItem({ ...row })} onDelete={row => setConfirmDel(row)}
+        onEdit={canEdit ? row => { setViewOnly(false); setEditItem({ ...row }); } : undefined}
+        onView={!canEdit && canView ? row => { setViewOnly(true); setEditItem({ ...row }); } : undefined}
+        onDelete={canDelete ? row => setConfirmDel(row) : undefined}
         renderCell={renderCell} storageKey="biz_delivery_notes_cols_v1" hideHeader
         customers={customers} onCustomerFilterChange={id => { setCustomerFilter(id); setPage(1); }} />
       {confirmDel && (

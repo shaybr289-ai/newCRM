@@ -1,28 +1,35 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useSites, useCreateSite, useUpdateSite, useDeleteSite } from '../../hooks/useSites';
 import { useCustomers } from '../../hooks/useCustomers';
 import { useContacts, useUpdateContact } from '../../hooks/useContacts';
+import { api } from '../../api/client';
 import { SITES_COLUMNS, EMPTY_SITE, STATUS_OPTIONS } from '../../utils/constants';
 import { Icon, ICONS } from '../../utils/icons';
 import DataTable from '../Layout/DataTable';
 import ModuleTopbar from '../Layout/ModuleTopbar';
 import OwnerSelect from '../Layout/OwnerSelect';
 import StatsBar from '../Layout/StatsBar';
+import { usePerms } from '../../hooks/usePerms';
+import DeleteConfirmModal from '../Layout/DeleteConfirmModal';
 import '../Layout/EditorPage.css';
 import '../Customers/CustomerModal.css';
 
 export default function SitesPage() {
+  const navigate = useNavigate();
+  const { canView, canCreate, canEdit, canDelete, canUseButton } = usePerms('sites');
   const [searchParams, setSearchParams] = useSearchParams();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [customerFilter, setCustomerFilter] = useState('');
   const [editItem, setEditItem] = useState(null);
+  const [viewOnly, setViewOnly] = useState(false);
   const [confirmDel, setConfirmDel] = useState(null);
   const [siteContactIds, setSiteContactIds] = useState([]);
 
   const { data, isLoading, error } = useSites({ page, limit: 50, search, customerId: customerFilter });
   const { data: custData } = useCustomers({ limit: 500 });
+  const { data: allContactsData } = useContacts({ limit: 1000 });
   const { data: contactsData } = useContacts({ customerId: editItem?.customer_id || '', limit: 500 });
   const createMut = useCreateSite();
   const updateMut = useUpdateSite();
@@ -31,20 +38,28 @@ export default function SitesPage() {
 
   const sites = data?.data || [];
   const customers = custData?.data || [];
+  const allContacts = allContactsData?.data || [];
   const contacts = contactsData?.data || [];
   const getCustName = (id) => customers.find(c => c.id === id)?.company_name || '—';
+  const getSiteContacts = (siteId) => allContacts.filter(c => c.site_id === siteId);
 
   useEffect(() => {
     const editId = searchParams.get('edit');
-    if (editId && data?.data) {
-      const item = data.data.find(s => s.id === editId);
-      if (item) {
-        setEditItem({ ...item });
-        setSearchParams({}, { replace: true });
-        // siteContactIds will be initialized once contactsData loads (see effect below)
-      }
+    const viewId = searchParams.get('view');
+    const isNew = searchParams.get('new');
+    const custId = searchParams.get('customer_id');
+    if (editId) {
+      setSearchParams({}, { replace: true });
+      api.get(`/api/sites/${editId}`).then(item => { if (item) { setViewOnly(false); setEditItem(item); } });
+    } else if (viewId) {
+      setSearchParams({}, { replace: true });
+      api.get(`/api/sites/${viewId}`).then(item => { if (item) { setViewOnly(true); setEditItem(item); } });
+    } else if (isNew) {
+      setSearchParams({}, { replace: true });
+      setViewOnly(false);
+      setEditItem({ ...EMPTY_SITE, customer_id: custId || '' });
     }
-  }, [searchParams, data]);
+  }, [searchParams]); // eslint-disable-line
 
   // When contacts load for the edited site, initialize the linked contact IDs
   useEffect(() => {
@@ -58,6 +73,11 @@ export default function SitesPage() {
       case 'customer_id': return getCustName(row.customer_id);
       case 'status': return <span className={`badge ${row.status === 'active' ? 'badge-success' : 'badge-danger'}`}>{row.status === 'active' ? 'פעיל' : 'לא פעיל'}</span>;
       case 'created_at': return row.created_at ? new Date(row.created_at).toLocaleDateString('he-IL') : '—';
+      case 'contact_id': {
+        const sc = getSiteContacts(row.id);
+        if (!sc.length) return '—';
+        return sc.map(c => [c.first_name, c.last_name].filter(Boolean).join(' ')).join(', ');
+      }
       default: return row[key] || '—';
     }
   };
@@ -85,7 +105,12 @@ export default function SitesPage() {
     setEditItem(null);
   };
 
-  const handleDelete = async () => { if (!confirmDel) return; await deleteMut.mutateAsync(confirmDel.id); setConfirmDel(null); };
+  const handleDelete = async () => {
+    if (!confirmDel) return;
+    await deleteMut.mutateAsync(confirmDel.id);
+    if (editItem?.id === confirmDel.id) setEditItem(null);
+    setConfirmDel(null);
+  };
   const upd = (k, v) => setEditItem(p => ({ ...p, [k]: v }));
 
   const siteStats = useMemo(() => [
@@ -99,16 +124,30 @@ export default function SitesPage() {
       <div className="tdb-topbar" style={{ marginBottom: 16 }}>
         <div className="tdb-topbar-left">
           <button className="tdb-calendar-btn" onClick={() => setEditItem(null)}>← חזרה לאתרים</button>
+          {editItem.customer_id && (
+            <button className="tdb-calendar-btn" onClick={() => navigate(`/customers/${editItem.customer_id}`)}>
+              <i className="ti ti-building-store" aria-hidden="true" /> לכרטיס לקוח
+            </button>
+          )}
           <span className="tdb-topbar-icon"><i className="ti ti-map-pin" aria-hidden="true" /></span>
-          <h1 className="tdb-topbar-title">{editItem.id ? `עריכת אתר — ${editItem.site_name || ''}` : 'אתר חדש'}</h1>
+          <h1 className="tdb-topbar-title">{viewOnly ? `צפייה — ${editItem.site_name || ''}` : editItem.id ? `עריכת אתר — ${editItem.site_name || ''}` : 'אתר חדש'}</h1>
+          {viewOnly && <span style={{ fontSize: 11, background: '#FEF3C7', color: '#92400E', border: '1px solid #F59E0B66', borderRadius: 999, padding: '2px 10px', fontWeight: 600 }}>צפייה בלבד</span>}
         </div>
         <div className="tdb-topbar-right">
-          <button className="tdb-calendar-btn" style={{ background: 'rgba(255,255,255,0.9)', color: '#074876', fontWeight: 700 }} onClick={handleSave} disabled={createMut.isPending || updateMut.isPending}>
-            {(createMut.isPending || updateMut.isPending) ? 'שומר...' : 'שמור'}
-          </button>
+          {!viewOnly && editItem.id && canDelete && canUseButton('btn_delete') && (
+            <button className="tdb-calendar-btn" style={{ background: 'rgba(220,38,38,0.18)', borderColor: 'rgba(220,38,38,0.5)' }} onClick={() => setConfirmDel(editItem)}>
+              <i className="ti ti-trash" aria-hidden="true" /> מחק
+            </button>
+          )}
+          {!viewOnly && canUseButton('btn_save') && (
+            <button className="tdb-calendar-btn" style={{ background: 'rgba(255,255,255,0.9)', color: '#074876', fontWeight: 700 }} onClick={handleSave} disabled={createMut.isPending || updateMut.isPending}>
+              {(createMut.isPending || updateMut.isPending) ? 'שומר...' : 'שמור'}
+            </button>
+          )}
         </div>
       </div>
       <div className="card">
+        <fieldset disabled={viewOnly} style={{ border: 'none', padding: 0, margin: 0 }}>
         <h3 className="form-section-title">פרטי אתר</h3>
         <div className="form-grid">
           <div className="form-field"><label>שם אתר *</label><input value={editItem.site_name || ''} onChange={e => upd('site_name', e.target.value)} autoFocus /></div>
@@ -164,6 +203,7 @@ export default function SitesPage() {
         {editItem.customer_id && contacts.length === 0 && (
           <p style={{ color: 'var(--text-3)', fontSize: 13, marginTop: 12 }}>אין אנשי קשר ללקוח זה</p>
         )}
+        </fieldset>
       </div>
     </div>
   );
@@ -171,27 +211,28 @@ export default function SitesPage() {
   return (
     <>
       <ModuleTopbar icon="ti-map-pin" title="אתרי לקוח">
-        <button className="tdb-calendar-btn" onClick={() => setEditItem({ ...EMPTY_SITE })}>
-          <i className="ti ti-plus" aria-hidden="true" /> אתר חדש
-        </button>
+        {canCreate && canUseButton('btn_new') && (
+          <button className="tdb-calendar-btn" onClick={() => setEditItem({ ...EMPTY_SITE })}>
+            <i className="ti ti-plus" aria-hidden="true" /> אתר חדש
+          </button>
+        )}
       </ModuleTopbar>
       <StatsBar stats={siteStats} />
       <DataTable columns={SITES_COLUMNS} data={sites} total={data?.total || 0} page={page} totalPages={data?.totalPages || 1}
         isLoading={isLoading} error={error} onSearchChange={s => { setSearch(s); setPage(1); }} onPageChange={setPage}
-        onEdit={row => setEditItem({ ...row })} onDelete={row => setConfirmDel(row)}
+        onEdit={canEdit ? row => { setViewOnly(false); setEditItem({ ...row }); } : undefined}
+        onView={!canEdit && canView ? row => { setViewOnly(true); setEditItem({ ...row }); } : undefined} onDelete={canDelete ? row => setConfirmDel(row) : undefined}
         renderCell={renderCell} storageKey="biz_sites_cols_v3" hideHeader
         customers={customers} onCustomerFilterChange={id => { setCustomerFilter(id); setPage(1); }} />
       {confirmDel && (
-        <div className="modal-overlay" onClick={() => setConfirmDel(null)}>
-          <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 400, padding: 24 }}>
-            <h3 style={{ marginBottom: 12 }}>מחיקת אתר</h3>
-            <p style={{ color: 'var(--text-2)', fontSize: 14, marginBottom: 20 }}>האם למחוק את <strong>{confirmDel.site_name}</strong>?</p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn btn-ghost" onClick={() => setConfirmDel(null)}>ביטול</button>
-              <button className="btn btn-danger" onClick={handleDelete} disabled={deleteMut.isPending}>{deleteMut.isPending ? 'מוחק...' : 'מחק'}</button>
-            </div>
-          </div>
-        </div>
+        <DeleteConfirmModal
+          title="מחיקת אתר"
+          name={confirmDel.site_name}
+          cascade="מחיקת האתר תסיר אותו מכל הרשומות המשויכות אליו: פריטי לקוח, הסכמי שירות."
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmDel(null)}
+          isPending={deleteMut.isPending}
+        />
       )}
     </>
   );

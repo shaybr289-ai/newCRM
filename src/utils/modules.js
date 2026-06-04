@@ -13,6 +13,7 @@ export const MODULES = [
   { id: 'orders',            label: 'הזמנות',              icon: 'orders',            path: '/orders',             color: '#059669' },
   { id: 'deliverynotes',     label: 'תעודות משלוח',        icon: 'deliverynotes',     path: '/delivery-notes',     color: '#14B8A6' },
   { id: 'deals',             label: 'עסקאות',              icon: 'deals',             path: '/deals',              color: '#EC4899' },
+  { id: 'leads',             label: 'לידים',               icon: 'leads',             path: '/leads',              color: '#F43F5E' },
   { id: 'datamanagement',    label: 'הגדרות',              icon: 'datamanagement',    path: '/data',               color: '#64748B' },
   { id: 'ai',                label: 'עוזר חכם',            icon: 'ai',                path: '/ai',                 color: '#9333EA' },
   { id: 'reports',           label: 'דוחות',               icon: 'reports',           path: '/reports',            color: '#D946EF' },
@@ -22,4 +23,5 @@ export const MODULES = [
   { id: 'attendance',        label: 'נוכחות',              icon: 'attendance',        path: '/attendance',         color: '#0D9488' },
   { id: 'taskreport',        label: 'דוח דיווחי משימות',   icon: 'reports',           path: '/tasks/submissions-report', color: '#0EA5E9' },
   { id: 'bulkupdate',        label: 'עדכון המוני',          icon: 'datamanagement',    path: '/bulk-update',              color: '#0891B2' },
+  { id: 'dashboards',        label: 'דשבורדים',             icon: 'reports',           path: '/dashboards',               color: '#7C3AED' },
 ];

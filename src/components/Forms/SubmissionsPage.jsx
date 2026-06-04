@@ -4,6 +4,7 @@
  */
 import { useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { usePerms } from '../../hooks/usePerms';
 import ModuleTopbar from '../Layout/ModuleTopbar';
 import { useFormFull, useFormSubmissions } from '../../hooks/useForms';
 import { useCompanyInfo } from '../../hooks/useDataManagement';
@@ -33,6 +34,7 @@ export default function SubmissionsPage() {
   const { id: formId } = useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { canEdit } = usePerms('forms');
 
   const { data: full } = useFormFull(formId);
   const { data, isLoading, error } = useFormSubmissions(formId, { limit: 100 });
@@ -122,9 +124,11 @@ export default function SubmissionsPage() {
         <button className="tdb-calendar-btn" onClick={() => navigate('/forms')}>
           <i className="ti ti-arrow-right" /> רשימת טפסים
         </button>
-        <button className="tdb-calendar-btn" onClick={() => navigate(`/forms/${formId}/edit`)}>
-          <i className="ti ti-edit" /> ערוך טופס
-        </button>
+        {canEdit && (
+          <button className="tdb-calendar-btn" onClick={() => navigate(`/forms/${formId}/edit`)}>
+            <i className="ti ti-edit" /> ערוך טופס
+          </button>
+        )}
       </ModuleTopbar>
 
       {/* Filter pills */}
@@ -195,27 +199,29 @@ export default function SubmissionsPage() {
                 </div>
 
                 {/* Actions */}
-                <div className="submission-actions">
-                  <span className="sub-action-label">שנה סטטוס:</span>
-                  {['reviewed', 'approved', 'rejected'].map((s) => (
+                {canEdit && (
+                  <div className="submission-actions">
+                    <span className="sub-action-label">שנה סטטוס:</span>
+                    {['reviewed', 'approved', 'rejected'].map((s) => (
+                      <button
+                        key={s}
+                        className="btn btn-secondary"
+                        disabled={sub.status === s || updatingId === sub.id}
+                        onClick={() => handleStatusChange(sub.id, s)}
+                        style={{ color: STATUS_COLOR[s] }}
+                      >
+                        {STATUS_LABEL[s]}
+                      </button>
+                    ))}
                     <button
-                      key={s}
-                      className="btn btn-secondary"
-                      disabled={sub.status === s || updatingId === sub.id}
-                      onClick={() => handleStatusChange(sub.id, s)}
-                      style={{ color: STATUS_COLOR[s] }}
+                      className="btn btn-ghost"
+                      style={{ marginRight: 'auto', color: 'var(--danger)' }}
+                      onClick={() => handleDelete(sub.id)}
                     >
-                      {STATUS_LABEL[s]}
+                      <i className="ti ti-trash" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> מחק
                     </button>
-                  ))}
-                  <button
-                    className="btn btn-ghost"
-                    style={{ marginRight: 'auto', color: 'var(--danger)' }}
-                    onClick={() => handleDelete(sub.id)}
-                  >
-                    <i className="ti ti-trash" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> מחק
-                  </button>
-                </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { usePerms } from '../../hooks/usePerms';
 import { api } from '../../api/client';
 import { useUpdateCustomer, useDeleteCustomer } from '../../hooks/useCustomers';
 import { useContacts, useCreateContact, useUpdateContact, useDeleteContact } from '../../hooks/useContacts';
 import { useSites, useCreateSite, useUpdateSite, useDeleteSite } from '../../hooks/useSites';
 import { useCreateAgreement, useUpdateAgreement, useDeleteAgreement } from '../../hooks/useServiceAgreements';
-import { getClientTypeLabel, CLIENT_TYPES, CURRENCIES, PAYMENT_TERMS, STATUS_OPTIONS, EMPTY_CONTACT, EMPTY_SITE, AGREEMENT_TYPES, SERVICE_TYPES, SERVICE_SCOPES, AUTO_RENEW_OPTIONS, EMPTY_AGREEMENT } from '../../utils/constants';
+import { CURRENCIES, EMPTY_CONTACT, EMPTY_SITE, AGREEMENT_TYPES, SERVICE_TYPES, SERVICE_SCOPES, AUTO_RENEW_OPTIONS, EMPTY_AGREEMENT } from '../../utils/constants';
+import { useLookups, lookupLabel } from '../../hooks/useLookups';
 import { Icon, ICONS } from '../../utils/icons';
 import CustomerModal from './CustomerModal';
 import CustomerServicesDashboard from '../Dashboards/CustomerServicesDashboard';
@@ -19,7 +21,7 @@ const TABS = [
   { id: 'contacts', label: 'אנשי קשר', icon: 'contacts' },
   { id: 'sites', label: 'אתרי לקוח', icon: 'sites' },
   { id: 'agreements', label: 'הסכמי שירות', icon: 'serviceagreements' },
-  { id: 'items', label: 'פריטים ושירותים', icon: 'custitems' },
+  { id: 'items', label: 'פריטי לקוח', icon: 'custitems' },
   { id: 'quotes', label: 'הצעות מחיר', icon: 'quotes' },
   { id: 'deals', label: 'עסקאות', icon: 'deals' },
   { id: 'orders', label: 'הזמנות', icon: 'products' },
@@ -32,6 +34,16 @@ const TABS = [
 export default function CustomerDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { canUseButton, canEdit, canDelete } = usePerms('customers');
+  const { canEdit: canEditContacts, canDelete: canDeleteContacts } = usePerms('contacts');
+  const { canEdit: canEditSites, canDelete: canDeleteSites } = usePerms('sites');
+  const { canEdit: canEditAgreements, canDelete: canDeleteAgreements } = usePerms('serviceagreements');
+  const { canView: canViewItems, canEdit: canEditItems, canUseButton: canUseItemButton } = usePerms('custitems');
+  const { canView: canViewQuotes, canEdit: canEditQuotes } = usePerms('quotes');
+  const { canView: canViewDeals, canEdit: canEditDeals } = usePerms('deals');
+  const { canView: canViewOrders, canEdit: canEditOrders } = usePerms('orders');
+  const { canView: canViewDeliveryNotes, canEdit: canEditDeliveryNotes } = usePerms('deliverynotes');
+  const { clientTypes, paymentTerms, customerStatuses } = useLookups();
   const [activeTab, setActiveTab] = useState('info');
   const [siteFilter, setSiteFilter] = useState('');
   const [editCust, setEditCust] = useState(null);
@@ -39,8 +51,12 @@ export default function CustomerDetailPage() {
   const [editSite, setEditSite] = useState(null);
   const [siteContactIds, setSiteContactIds] = useState([]); // contacts linked to site being edited
   const [editAgreement, setEditAgreement] = useState(null);
+  const [formReadOnly, setFormReadOnly] = useState(false);
   const [confirmDel, setConfirmDel] = useState(null);
   const [confirmDelRelated, setConfirmDelRelated] = useState(null); // { type, item }
+
+  const openEdit = (setter) => (item) => { setFormReadOnly(false); setter(item); };
+  const openView = (setter) => (item) => { setFormReadOnly(true); setter(item); };
 
   // Fetch customer
   const { data: customer, isLoading, error } = useQuery({
@@ -207,66 +223,6 @@ export default function CustomerDetailPage() {
     );
   }
 
-  // Full-page contact editor (takes over the whole page)
-  if (editContact) {
-    const upd = (k, v) => setEditContact(p => ({ ...p, [k]: v }));
-    return (
-      <div className="animate-in">
-        <div className="editor-topbar">
-          <button className="btn btn-ghost" onClick={() => setEditContact(null)}>
-            <Icon svg={ICONS.back} size={16} /> חזרה לכרטיס הלקוח
-          </button>
-          <div className="editor-topbar-title">
-            <h1>{editContact.id ? `עריכת איש קשר — ${editContact.first_name || ''} ${editContact.last_name || ''}` : 'איש קשר חדש'}</h1>
-            <span className="editor-topbar-sub">ללקוח: {customer.company_name}</span>
-          </div>
-          <button className="btn btn-primary" onClick={handleSaveContact}
-            disabled={createContactMut.isPending || updateContactMut.isPending}>
-            {(createContactMut.isPending || updateContactMut.isPending) ? 'שומר...' : 'שמור'}
-          </button>
-        </div>
-        <div className="card">
-          <h3 className="form-section-title">פרטים אישיים</h3>
-          <div className="form-grid">
-            <div className="form-field"><label>שם פרטי *</label><input value={editContact.first_name || ''} onChange={e => upd('first_name', e.target.value)} autoFocus /></div>
-            <div className="form-field"><label>שם משפחה</label><input value={editContact.last_name || ''} onChange={e => upd('last_name', e.target.value)} /></div>
-            <div className="form-field"><label>תפקיד</label><input value={editContact.role || ''} onChange={e => upd('role', e.target.value)} /></div>
-            <div className="form-field"><label>מחלקה</label><input value={editContact.department || ''} onChange={e => upd('department', e.target.value)} /></div>
-            <div className="form-field"><label>סטטוס</label>
-              <select value={editContact.status || 'active'} onChange={e => upd('status', e.target.value)}>
-                <option value="active">פעיל</option>
-                <option value="inactive">לא פעיל</option>
-              </select>
-            </div>
-            <OwnerSelect value={editContact.created_by} onChange={v => upd('created_by', v)} label="בעלי רשומה איש קשר" />
-          </div>
-
-          <h3 className="form-section-title">פרטי התקשרות</h3>
-          <div className="form-grid">
-            <div className="form-field"><label>אי-מייל</label><input value={editContact.email || ''} onChange={e => upd('email', e.target.value)} dir="ltr" type="email" /></div>
-            <div className="form-field"><label>נייד</label><input value={editContact.mobile || ''} onChange={e => upd('mobile', e.target.value)} dir="ltr" type="tel" /></div>
-            <div className="form-field"><label>תאריך לידה</label><input type="date" value={editContact.birth_date ? String(editContact.birth_date).split('T')[0] : ''} onChange={e => upd('birth_date', e.target.value)} dir="ltr" /></div>
-          </div>
-
-          <div style={{ display: 'flex', gap: 24, marginTop: 16 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-              <input type="checkbox" checked={!!editContact.is_primary} onChange={e => upd('is_primary', e.target.checked)} style={{ width: 18, height: 18 }} />
-              <span><i className="ti ti-star" aria-hidden="true" style={{ verticalAlign: '-2px', color: '#f59e0b', marginLeft: 2 }} /> איש קשר ראשי</span>
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-              <input type="checkbox" checked={!!editContact.is_vip} onChange={e => upd('is_vip', e.target.checked)} style={{ width: 18, height: 18 }} />
-              <span><i className="ti ti-crown" aria-hidden="true" style={{ verticalAlign: '-2px', color: '#8b5cf6', marginLeft: 2 }} /> VIP</span>
-            </label>
-          </div>
-
-          <div className="form-field" style={{ marginTop: 16 }}>
-            <label>הערות</label>
-            <textarea value={editContact.notes || ''} onChange={e => upd('notes', e.target.value)} rows={3} />
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="animate-in">
@@ -287,7 +243,7 @@ export default function CustomerDetailPage() {
             <h1 className="tdb-topbar-title">{customer.company_name}</h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, opacity: 0.85 }}>
               {customer.cust_num && <span>#{customer.cust_num}</span>}
-              <span>{getClientTypeLabel(customer.client_type)}</span>
+              <span>{lookupLabel(clientTypes, customer.client_type)}</span>
               <span style={{ background: customer.status === 'active' ? '#22c55e33' : '#ef444433', color: customer.status === 'active' ? '#86efac' : '#fca5a5', border: `1px solid ${customer.status === 'active' ? '#22c55e66' : '#ef444466'}`, borderRadius: 999, padding: '1px 8px', fontSize: 11, fontWeight: 600 }}>
                 {customer.status === 'active' ? 'פעיל' : 'לא פעיל'}
               </span>
@@ -298,12 +254,16 @@ export default function CustomerDetailPage() {
           <button className="tdb-calendar-btn" onClick={() => navigate(`/customers/${customer.id}/relations`)}>
             <i className="ti ti-hierarchy" aria-hidden="true" /> מפת קשרים
           </button>
-          <button className="tdb-calendar-btn" onClick={() => setEditCust(customer)} style={{ fontWeight: 700 }}>
-            <i className="ti ti-edit" aria-hidden="true" /> עריכת לקוח
-          </button>
-          <button className="tdb-calendar-btn" onClick={() => setConfirmDel(true)} style={{ background: 'rgba(239,68,68,0.25)', borderColor: 'rgba(239,68,68,0.5)' }}>
-            <i className="ti ti-trash" aria-hidden="true" /> מחק
-          </button>
+          {canUseButton('btn_edit_customer') && (
+            <button className="tdb-calendar-btn" onClick={() => setEditCust(customer)} style={{ fontWeight: 700 }}>
+              <i className="ti ti-edit" aria-hidden="true" /> עריכת לקוח
+            </button>
+          )}
+          {canUseButton('btn_delete_customer') && (
+            <button className="tdb-calendar-btn" onClick={() => setConfirmDel(true)} style={{ background: 'rgba(239,68,68,0.25)', borderColor: 'rgba(239,68,68,0.5)' }}>
+              <i className="ti ti-trash" aria-hidden="true" /> מחק
+            </button>
+          )}
         </div>
       </div>
 
@@ -326,7 +286,7 @@ export default function CustomerDetailPage() {
 
       {/* Tab Content */}
       <div className="detail-content card">
-        {activeTab === 'info' && <InfoTab customer={customer} />}
+        {activeTab === 'info' && <InfoTab customer={customer} clientTypes={clientTypes} paymentTerms={paymentTerms} />}
         {activeTab === 'contacts' && (
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
@@ -362,10 +322,11 @@ export default function CustomerDetailPage() {
                 { key: 'is_vip', label: 'VIP', render: v => v ? <i className="ti ti-crown" aria-hidden="true" style={{ color: '#8b5cf6' }} /> : '' },
                 { key: 'status', label: 'סטטוס', render: v => <span className={`badge ${v === 'active' ? 'badge-success' : 'badge-danger'}`}>{v === 'active' ? 'פעיל' : 'לא פעיל'}</span> },
               ]}
-              onAdd={() => setEditContact({ ...EMPTY_CONTACT, customer_id: id })}
+              onAdd={canUseButton('btn_new_contact') ? () => navigate(`/contacts?new=true&customer_id=${id}`) : undefined}
               addLabel="איש קשר חדש"
-              onEdit={(item) => setEditContact({ ...item })}
-              onDelete={(item) => setConfirmDelRelated({ type: 'contact', item })}
+              onEdit={canEditContacts ? (item) => navigate(`/contacts?edit=${item.id}`) : undefined}
+              onView={!canEditContacts ? (item) => navigate(`/contacts?view=${item.id}`) : undefined}
+              onDelete={canDeleteContacts ? (item) => setConfirmDelRelated({ type: 'contact', item }) : undefined}
             />
           </>
         )}
@@ -383,10 +344,11 @@ export default function CustomerDetailPage() {
               }},
               { key: 'status', label: 'סטטוס', render: v => <span className={`badge ${v === 'active' ? 'badge-success' : 'badge-danger'}`}>{v === 'active' ? 'פעיל' : 'לא פעיל'}</span> },
             ]}
-            onAdd={() => { setEditSite({ ...EMPTY_SITE, customer_id: id }); setSiteContactIds([]); }}
+            onAdd={canUseButton('btn_new_site') ? () => navigate(`/sites?new=true&customer_id=${id}`) : undefined}
             addLabel="אתר חדש"
-            onEdit={(item) => { setEditSite({ ...item }); setSiteContactIds(contacts.filter(c => c.site_id === item.id).map(c => c.id)); }}
-            onDelete={(item) => setConfirmDelRelated({ type: 'site', item })}
+            onEdit={canEditSites ? (item) => navigate(`/sites?edit=${item.id}`) : undefined}
+            onView={!canEditSites ? (item) => navigate(`/sites?view=${item.id}`) : undefined}
+            onDelete={canDeleteSites ? (item) => setConfirmDelRelated({ type: 'site', item }) : undefined}
           />
         )}
         {activeTab === 'agreements' && (
@@ -401,15 +363,16 @@ export default function CustomerDetailPage() {
               { key: 'end_date', label: 'תאריך סיום', render: v => v ? new Date(v).toLocaleDateString('he-IL') : '—' },
               { key: 'status', label: 'סטטוס', render: v => <span className={`badge ${v === 'active' ? 'badge-success' : 'badge-danger'}`}>{v === 'active' ? 'פעיל' : 'לא פעיל'}</span> },
             ]}
-            onAdd={() => setEditAgreement({ ...EMPTY_AGREEMENT, customer_id: id })}
+            onAdd={canUseButton('btn_new_agreement') ? () => navigate(`/service-agreements?new=true&customer_id=${id}`) : undefined}
             addLabel="הסכם חדש"
-            onEdit={(item) => setEditAgreement({ ...item })}
-            onDelete={(item) => setConfirmDelRelated({ type: 'agreement', item })}
+            onEdit={canEditAgreements ? (item) => navigate(`/service-agreements?edit=${item.id}`) : undefined}
+            onView={!canEditAgreements ? (item) => navigate(`/service-agreements?view=${item.id}`) : undefined}
+            onDelete={canDeleteAgreements ? (item) => setConfirmDelRelated({ type: 'agreement', item }) : undefined}
           />
         )}
         {activeTab === 'items' && (
           <RelatedTab
-            title="פריטים ושירותים"
+            title="פריטי לקוח"
             items={items}
             columns={[
               { key: 'item_name', label: 'שם פריט' },
@@ -418,7 +381,10 @@ export default function CustomerDetailPage() {
               { key: 'item_type', label: 'סוג' },
               { key: 'status', label: 'סטטוס', render: v => <span className={`badge ${v === 'active' ? 'badge-success' : 'badge-danger'}`}>{v === 'active' ? 'פעיל' : 'לא פעיל'}</span> },
             ]}
-            onEdit={(item) => navigate(`/cust-items?edit=${item.id}`)}
+            onAdd={canUseButton('btn_new_item') ? () => navigate(`/cust-items?new=true&customer_id=${id}`) : undefined}
+            addLabel="פריט חדש"
+            onEdit={canEditItems ? (item) => navigate(`/cust-items?edit=${item.id}`) : undefined}
+            onView={!canEditItems && canViewItems ? (item) => navigate(`/cust-items?view=${item.id}`) : undefined}
           />
         )}
         {activeTab === 'quotes' && (
@@ -432,7 +398,10 @@ export default function CustomerDetailPage() {
               { key: 'quote_date', label: 'תאריך', render: v => v ? new Date(v).toLocaleDateString('he-IL') : '—' },
               { key: 'status', label: 'סטטוס', render: v => <span className={`badge ${v === 'active' ? 'badge-success' : 'badge-danger'}`}>{v === 'active' ? 'פעיל' : 'לא פעיל'}</span> },
             ]}
-            onEdit={(item) => navigate(`/quotes/${item.id}/edit`)}
+            onAdd={canUseButton('btn_new_quote') ? () => navigate(`/quotes/new?customer_id=${id}`) : undefined}
+            addLabel="הצעת מחיר חדשה"
+            onEdit={canEditQuotes ? (item) => navigate(`/quotes/${item.id}/edit`) : undefined}
+            onView={!canEditQuotes && canViewQuotes ? (item) => navigate(`/quotes/${item.id}/edit?viewOnly=1`) : undefined}
           />
         )}
         {activeTab === 'deals' && (
@@ -447,7 +416,10 @@ export default function CustomerDetailPage() {
               { key: 'expected_recurring', label: 'שוטף צפוי', render: v => v ? `₪${Number(v).toLocaleString()}` : '—' },
               { key: 'expected_close_date', label: 'סגירה צפויה', render: v => v ? new Date(v).toLocaleDateString('he-IL') : '—' },
             ]}
-            onEdit={(item) => navigate(`/deals?edit=${item.id}`)}
+            onAdd={canUseButton('btn_new_deal') ? () => navigate(`/deals?new=true&customer_id=${id}`) : undefined}
+            addLabel="עסקה חדשה"
+            onEdit={canEditDeals ? (item) => navigate(`/deals?edit=${item.id}`) : undefined}
+            onView={!canEditDeals && canViewDeals ? (item) => navigate(`/deals?edit=${item.id}&viewOnly=1`) : undefined}
           />
         )}
         {activeTab === 'orders' && (
@@ -461,7 +433,10 @@ export default function CustomerDetailPage() {
               { key: 'order_date', label: 'תאריך', render: v => v ? new Date(v).toLocaleDateString('he-IL') : '—' },
               { key: 'total', label: 'סכום', render: v => v ? `₪${Number(v).toLocaleString()}` : '—' },
             ]}
-            onEdit={(item) => navigate(`/orders?edit=${item.id}`)}
+            onAdd={canUseButton('btn_new_order') ? () => navigate(`/orders?new=true&customer_id=${id}`) : undefined}
+            addLabel="הזמנה חדשה"
+            onEdit={canEditOrders ? (item) => navigate(`/orders?edit=${item.id}`) : undefined}
+            onView={!canEditOrders && canViewOrders ? (item) => navigate(`/orders?edit=${item.id}&viewOnly=1`) : undefined}
           />
         )}
         {activeTab === 'delivery-notes' && (
@@ -476,185 +451,212 @@ export default function CustomerDetailPage() {
               { key: 'signed_by', label: 'נחתם ע"י', render: v => v || '—' },
               { key: 'created_at', label: 'נוצר', render: v => v ? new Date(v).toLocaleDateString('he-IL') : '—' },
             ]}
-            onEdit={(item) => navigate(`/delivery-notes?edit=${item.id}`)}
+            onAdd={canUseButton('btn_new_delivery_note') ? () => navigate(`/delivery-notes?new=true&customer_id=${id}`) : undefined}
+            addLabel="תעודת משלוח חדשה"
+            onEdit={canEditDeliveryNotes ? (item) => navigate(`/delivery-notes?edit=${item.id}`) : undefined}
+            onView={!canEditDeliveryNotes && canViewDeliveryNotes ? (item) => navigate(`/delivery-notes?edit=${item.id}&viewOnly=1`) : undefined}
           />
         )}
         {activeTab === 'invoices' && (
-          <PlaceholderTab icon="deals" title="חשבוניות" description="מודול חשבוניות יתווסף בקרוב" />
+          <PlaceholderTab icon="deals" title="חשבוניות" description="מודול חשבוניות יתווסף בקרוב" addLabel="חשבונית חדשה" />
         )}
         {activeTab === 'files' && (
-          <PlaceholderTab icon="datamanagement" title="קבצים מצורפים" description="מודול קבצים מצורפים יתווסף בקרוב" />
+          <PlaceholderTab icon="datamanagement" title="קבצים מצורפים" description="מודול קבצים מצורפים יתווסף בקרוב" addLabel="קובץ חדש" />
         )}
         {activeTab === 'customer360' && (
           <CustomerServicesDashboard customerId={id} />
         )}
       </div>
 
-      {/* Add Contact Modal — DISABLED (replaced by full-page editor early return) */}
-      {false && editContact && (
-        <div className="modal-overlay" onClick={() => setEditContact(null)}>
-          <div className="modal-card" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>{editContact.id ? 'עריכת איש קשר' : 'איש קשר חדש'}</h2>
-              <button className="modal-close" onClick={() => setEditContact(null)}>&times;</button>
-            </div>
-            <form onSubmit={handleSaveContact} className="modal-body">
-              <div className="form-grid">
-                <div className="form-field"><label>שם פרטי *</label><input value={editContact.first_name||''} onChange={e=>setEditContact(p=>({...p,first_name:e.target.value}))} autoFocus /></div>
-                <div className="form-field"><label>שם משפחה</label><input value={editContact.last_name||''} onChange={e=>setEditContact(p=>({...p,last_name:e.target.value}))} /></div>
-                <div className="form-field"><label>תפקיד</label><input value={editContact.role||''} onChange={e=>setEditContact(p=>({...p,role:e.target.value}))} /></div>
-                <div className="form-field"><label>מחלקה</label><input value={editContact.department||''} onChange={e=>setEditContact(p=>({...p,department:e.target.value}))} /></div>
-                <div className="form-field"><label>אי-מייל</label><input value={editContact.email||''} onChange={e=>setEditContact(p=>({...p,email:e.target.value}))} dir="ltr" type="email" /></div>
-                <div className="form-field"><label>נייד</label><input value={editContact.mobile||''} onChange={e=>setEditContact(p=>({...p,mobile:e.target.value}))} dir="ltr" type="tel" /></div>
-                <div className="form-field"><label>תאריך לידה</label><input type="date" value={editContact.birth_date ? String(editContact.birth_date).split('T')[0] : ''} onChange={e=>setEditContact(p=>({...p,birth_date:e.target.value}))} dir="ltr" /></div>
-                <div className="form-field"><label>סטטוס</label>
-                  <select value={editContact.status || 'active'} onChange={e=>setEditContact(p=>({...p,status:e.target.value}))}>
-                    <option value="active">פעיל</option>
-                    <option value="inactive">לא פעיל</option>
-                  </select>
-                </div>
-                <OwnerSelect value={editContact.created_by} onChange={v=>setEditContact(p=>({...p,created_by:v}))} label="בעלי רשומה איש קשר" />
-              </div>
-              <div style={{ display: 'flex', gap: 20, marginTop: 12 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
-                  <input type="checkbox" checked={!!editContact.is_primary} onChange={e=>setEditContact(p=>({...p,is_primary:e.target.checked}))} style={{ width: 16, height: 16 }} /> <i className="ti ti-star" aria-hidden="true" style={{ verticalAlign: '-2px', color: '#f59e0b', marginLeft: 2 }} /> איש קשר ראשי
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
-                  <input type="checkbox" checked={!!editContact.is_vip} onChange={e=>setEditContact(p=>({...p,is_vip:e.target.checked}))} style={{ width: 16, height: 16 }} /> <i className="ti ti-crown" aria-hidden="true" style={{ verticalAlign: '-2px', color: '#8b5cf6', marginLeft: 2 }} /> VIP
-                </label>
-              </div>
-              <div className="form-field" style={{ marginTop: 12 }}>
-                <label>הערות</label>
-                <textarea value={editContact.notes || ''} onChange={e=>setEditContact(p=>({...p,notes:e.target.value}))} rows={3} />
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-ghost" onClick={() => setEditContact(null)}>ביטול</button>
-                <button type="submit" className="btn btn-primary" disabled={createContactMut.isPending || updateContactMut.isPending}>
-                  {(createContactMut.isPending || updateContactMut.isPending) ? 'שומר...' : editContact.id ? 'עדכון' : 'יצירה'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* [contacts, sites, agreements now navigate to their module pages] */}
 
-      {/* Add Site Modal */}
-      {editSite && (
-        <div className="modal-overlay" onClick={() => setEditSite(null)}>
-          <div className="modal-card" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>{editSite.id ? 'עריכת אתר' : 'אתר חדש'}</h2>
-              <button className="modal-close" onClick={() => setEditSite(null)}>&times;</button>
-            </div>
-            <form onSubmit={handleSaveSite} className="modal-body">
-              <h3 className="form-section-title">פרטי אתר</h3>
-              <div className="form-grid">
-                <div className="form-field"><label>שם אתר *</label><input value={editSite.site_name||''} onChange={e=>setEditSite(p=>({...p,site_name:e.target.value}))} autoFocus /></div>
-                <div className="form-field"><label>כתובת</label><input value={editSite.street||''} onChange={e=>setEditSite(p=>({...p,street:e.target.value}))} /></div>
-                <div className="form-field"><label>עיר</label><input value={editSite.city||''} onChange={e=>setEditSite(p=>({...p,city:e.target.value}))} /></div>
-                <div className="form-field"><label>סטטוס</label>
-                  <select value={editSite.status || 'active'} onChange={e=>setEditSite(p=>({...p,status:e.target.value}))}>
-                    <option value="active">פעיל</option>
-                    <option value="inactive">לא פעיל</option>
-                  </select>
-                </div>
-                <OwnerSelect value={editSite.site_owner_id} onChange={v=>setEditSite(p=>({...p,site_owner_id:v}))} label="בעלי רשומה אתר" />
+      {false && editContact && (() => {
+        const ro = formReadOnly;
+        const roStyle = ro ? { background: 'var(--bg-elevated)', cursor: 'default' } : {};
+        const upd = (k, v) => { if (!ro) setEditContact(p => ({ ...p, [k]: v })); };
+        return (
+          <div className="modal-overlay" onClick={() => setEditContact(null)}>
+            <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 580 }}>
+              <div className="modal-header">
+                <h2>{ro ? `צפייה — ${editContact.first_name || ''} ${editContact.last_name || ''}` : editContact.id ? 'עריכת איש קשר' : 'איש קשר חדש'}</h2>
+                <button className="modal-close" onClick={() => setEditContact(null)}>&times;</button>
               </div>
-              <h3 className="form-section-title">מיקום גאוגרפי</h3>
-              <div className="form-grid">
-                <div className="form-field"><label>קו אורך</label><input value={editSite.longitude||''} onChange={e=>setEditSite(p=>({...p,longitude:e.target.value}))} dir="ltr" type="number" step="any" /></div>
-                <div className="form-field"><label>קו רוחב</label><input value={editSite.latitude||''} onChange={e=>setEditSite(p=>({...p,latitude:e.target.value}))} dir="ltr" type="number" step="any" /></div>
-              </div>
-              {contacts.length > 0 && (
-                <div style={{ marginTop: 16 }}>
-                  <h3 className="form-section-title">אנשי קשר משוייכים לאתר</h3>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    {contacts.map(c => {
-                      const checked = siteContactIds.includes(c.id);
-                      const toggle = () => setSiteContactIds(prev =>
-                        checked ? prev.filter(x => x !== c.id) : [...prev, c.id]
-                      );
-                      return (
-                        <button key={c.id} type="button" onClick={toggle}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 6,
-                            padding: '6px 14px', borderRadius: 20,
-                            border: checked ? '2px solid var(--accent)' : '1px solid var(--border)',
-                            background: checked ? 'var(--accent)' : 'var(--bg-card)',
-                            color: checked ? 'white' : 'var(--text-2)',
-                            cursor: 'pointer', fontSize: 13, fontWeight: checked ? 600 : 400,
-                            transition: 'all 0.2s',
-                          }}>
-                          {checked && <i className="ti ti-check" aria-hidden="true" style={{ fontSize: 12 }} />}
-                          {c.first_name} {c.last_name || ''}
-                          {c.role && <span style={{ fontSize: 11, opacity: 0.75 }}>({c.role})</span>}
-                        </button>
-                      );
-                    })}
+              <form onSubmit={ro ? e => e.preventDefault() : handleSaveContact} className="modal-body">
+                <h3 className="form-section-title">פרטים אישיים</h3>
+                <div className="form-grid">
+                  <div className="form-field"><label>שם פרטי</label><input value={editContact.first_name || ''} onChange={e => upd('first_name', e.target.value)} readOnly={ro} style={roStyle} autoFocus={!ro} /></div>
+                  <div className="form-field"><label>שם משפחה</label><input value={editContact.last_name || ''} onChange={e => upd('last_name', e.target.value)} readOnly={ro} style={roStyle} /></div>
+                  <div className="form-field"><label>תפקיד</label><input value={editContact.role || ''} onChange={e => upd('role', e.target.value)} readOnly={ro} style={roStyle} /></div>
+                  <div className="form-field"><label>מחלקה</label><input value={editContact.department || ''} onChange={e => upd('department', e.target.value)} readOnly={ro} style={roStyle} /></div>
+                  <div className="form-field"><label>סטטוס</label>
+                    <select value={editContact.status || 'active'} onChange={e => upd('status', e.target.value)} disabled={ro} style={roStyle}>
+                      <option value="active">פעיל</option>
+                      <option value="inactive">לא פעיל</option>
+                    </select>
                   </div>
+                  <OwnerSelect value={editContact.created_by} onChange={v => upd('created_by', v)} label="בעלי רשומה איש קשר" disabled={ro} />
                 </div>
-              )}
-              <div className="modal-footer">
-                <button type="button" className="btn btn-ghost" onClick={() => setEditSite(null)}>ביטול</button>
-                <button type="submit" className="btn btn-primary" disabled={createSiteMut.isPending || updateSiteMut.isPending}>
-                  {(createSiteMut.isPending || updateSiteMut.isPending) ? 'שומר...' : editSite.id ? 'עדכון' : 'יצירה'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
-      {/* Edit Agreement Modal */}
-      {editAgreement && (
+                <h3 className="form-section-title">פרטי התקשרות</h3>
+                <div className="form-grid">
+                  <div className="form-field"><label>אי-מייל</label><input value={editContact.email || ''} onChange={e => upd('email', e.target.value)} dir="ltr" type="email" readOnly={ro} style={roStyle} /></div>
+                  <div className="form-field"><label>נייד</label><input value={editContact.mobile || ''} onChange={e => upd('mobile', e.target.value)} dir="ltr" type="tel" readOnly={ro} style={roStyle} /></div>
+                  <div className="form-field"><label>תאריך לידה</label><input type="date" value={editContact.birth_date ? String(editContact.birth_date).split('T')[0] : ''} onChange={e => upd('birth_date', e.target.value)} dir="ltr" readOnly={ro} style={roStyle} /></div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 24, marginTop: 16 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: ro ? 'default' : 'pointer' }}>
+                    <input type="checkbox" checked={!!editContact.is_primary} onChange={e => upd('is_primary', e.target.checked)} disabled={ro} style={{ width: 18, height: 18 }} />
+                    <span><i className="ti ti-star" aria-hidden="true" style={{ verticalAlign: '-2px', color: '#f59e0b', marginLeft: 2 }} /> איש קשר ראשי</span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: ro ? 'default' : 'pointer' }}>
+                    <input type="checkbox" checked={!!editContact.is_vip} onChange={e => upd('is_vip', e.target.checked)} disabled={ro} style={{ width: 18, height: 18 }} />
+                    <span><i className="ti ti-crown" aria-hidden="true" style={{ verticalAlign: '-2px', color: '#8b5cf6', marginLeft: 2 }} /> VIP</span>
+                  </label>
+                </div>
+
+                <div className="form-field" style={{ marginTop: 16 }}>
+                  <label>הערות</label>
+                  <textarea value={editContact.notes || ''} onChange={e => upd('notes', e.target.value)} rows={3} readOnly={ro} style={roStyle} />
+                </div>
+
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-ghost" onClick={() => setEditContact(null)}>{ro ? 'סגור' : 'ביטול'}</button>
+                  {!ro && canUseButton('btn_save_contact') && (
+                    <button type="submit" className="btn btn-primary" disabled={createContactMut.isPending || updateContactMut.isPending}>
+                      {(createContactMut.isPending || updateContactMut.isPending) ? 'שומר...' : 'שמור'}
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+          </div>
+        );
+      })()}
+
+      {false && editSite && (() => {
+        const ro = formReadOnly;
+        const roStyle = ro ? { background: 'var(--bg-elevated)', cursor: 'default' } : {};
+        return (
+          <div className="modal-overlay" onClick={() => setEditSite(null)}>
+            <div className="modal-card" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>{ro ? 'צפייה — אתר' : editSite.id ? 'עריכת אתר' : 'אתר חדש'}</h2>
+                <button className="modal-close" onClick={() => setEditSite(null)}>&times;</button>
+              </div>
+              <form onSubmit={ro ? e => e.preventDefault() : handleSaveSite} className="modal-body">
+                <h3 className="form-section-title">פרטי אתר</h3>
+                <div className="form-grid">
+                  <div className="form-field"><label>שם אתר</label><input value={editSite.site_name||''} onChange={e=>{ if(!ro) setEditSite(p=>({...p,site_name:e.target.value})); }} readOnly={ro} style={roStyle} autoFocus={!ro} /></div>
+                  <div className="form-field"><label>כתובת</label><input value={editSite.street||''} onChange={e=>{ if(!ro) setEditSite(p=>({...p,street:e.target.value})); }} readOnly={ro} style={roStyle} /></div>
+                  <div className="form-field"><label>עיר</label><input value={editSite.city||''} onChange={e=>{ if(!ro) setEditSite(p=>({...p,city:e.target.value})); }} readOnly={ro} style={roStyle} /></div>
+                  <div className="form-field"><label>סטטוס</label>
+                    <select value={editSite.status || 'active'} onChange={e=>{ if(!ro) setEditSite(p=>({...p,status:e.target.value})); }} disabled={ro} style={roStyle}>
+                      <option value="active">פעיל</option>
+                      <option value="inactive">לא פעיל</option>
+                    </select>
+                  </div>
+                  <OwnerSelect value={editSite.site_owner_id} onChange={v=>{ if(!ro) setEditSite(p=>({...p,site_owner_id:v})); }} label="בעלי רשומה אתר" disabled={ro} />
+                </div>
+                <h3 className="form-section-title">מיקום גאוגרפי</h3>
+                <div className="form-grid">
+                  <div className="form-field"><label>קו אורך</label><input value={editSite.longitude||''} onChange={e=>{ if(!ro) setEditSite(p=>({...p,longitude:e.target.value})); }} dir="ltr" type="number" step="any" readOnly={ro} style={roStyle} /></div>
+                  <div className="form-field"><label>קו רוחב</label><input value={editSite.latitude||''} onChange={e=>{ if(!ro) setEditSite(p=>({...p,latitude:e.target.value})); }} dir="ltr" type="number" step="any" readOnly={ro} style={roStyle} /></div>
+                </div>
+                {contacts.length > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <h3 className="form-section-title">אנשי קשר משוייכים לאתר</h3>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {contacts.map(c => {
+                        const checked = siteContactIds.includes(c.id);
+                        const toggle = () => { if (!ro) setSiteContactIds(prev => checked ? prev.filter(x => x !== c.id) : [...prev, c.id]); };
+                        return (
+                          <button key={c.id} type="button" onClick={toggle}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 6,
+                              padding: '6px 14px', borderRadius: 20,
+                              border: checked ? '2px solid var(--accent)' : '1px solid var(--border)',
+                              background: checked ? 'var(--accent)' : 'var(--bg-card)',
+                              color: checked ? 'white' : 'var(--text-2)',
+                              cursor: ro ? 'default' : 'pointer', fontSize: 13, fontWeight: checked ? 600 : 400,
+                              transition: 'all 0.2s',
+                            }}>
+                            {checked && <i className="ti ti-check" aria-hidden="true" style={{ fontSize: 12 }} />}
+                            {c.first_name} {c.last_name || ''}
+                            {c.role && <span style={{ fontSize: 11, opacity: 0.75 }}>({c.role})</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-ghost" onClick={() => setEditSite(null)}>{ro ? 'סגור' : 'ביטול'}</button>
+                  {!ro && canUseButton('btn_save_site') && (
+                    <button type="submit" className="btn btn-primary" disabled={createSiteMut.isPending || updateSiteMut.isPending}>
+                      {(createSiteMut.isPending || updateSiteMut.isPending) ? 'שומר...' : 'שמור'}
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+          </div>
+        );
+      })()}
+
+      {false && editAgreement && (() => {
+        const ro = formReadOnly;
+        const roStyle = ro ? { background: 'var(--bg-elevated)', cursor: 'default' } : {};
+        const updAgr = (k, v) => { if (!ro) setEditAgreement(p => ({ ...p, [k]: v })); };
+        return (
         <div className="modal-overlay" onClick={() => setEditAgreement(null)}>
           <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 650 }}>
             <div className="modal-header">
-              <h2>{editAgreement.id ? 'עריכת הסכם שירות' : 'הסכם שירות חדש'}</h2>
+              <h2>{ro ? 'צפייה — הסכם שירות' : editAgreement.id ? 'עריכת הסכם שירות' : 'הסכם שירות חדש'}</h2>
               <button className="modal-close" onClick={() => setEditAgreement(null)}>&times;</button>
             </div>
-            <form onSubmit={handleSaveAgreement} className="modal-body">
+            <form onSubmit={ro ? e => e.preventDefault() : handleSaveAgreement} className="modal-body">
               <h3 className="form-section-title">פרטי ההסכם</h3>
               <div className="form-grid">
                 <div className="form-field">
                   <label>איש קשר</label>
-                  <select value={editAgreement.contact_id || ''} onChange={e => setEditAgreement(p => ({ ...p, contact_id: e.target.value }))}>
+                  <select value={editAgreement.contact_id || ''} onChange={e => updAgr('contact_id', e.target.value)} disabled={ro} style={roStyle}>
                     <option value="">-- בחר --</option>
                     {contacts.map(c => <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>)}
                   </select>
                 </div>
                 <div className="form-field">
                   <label>סוג הסכם</label>
-                  <select value={editAgreement.agreement_type || ''} onChange={e => setEditAgreement(p => ({ ...p, agreement_type: e.target.value }))}>
+                  <select value={editAgreement.agreement_type || ''} onChange={e => updAgr('agreement_type', e.target.value)} disabled={ro} style={roStyle}>
                     <option value="">-- בחר --</option>
                     {AGREEMENT_TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                   </select>
                 </div>
                 <div className="form-field">
                   <label>מודל שירות</label>
-                  <select value={editAgreement.service_type || ''} onChange={e => setEditAgreement(p => ({ ...p, service_type: e.target.value }))}>
+                  <select value={editAgreement.service_type || ''} onChange={e => updAgr('service_type', e.target.value)} disabled={ro} style={roStyle}>
                     <option value="">-- בחר --</option>
                     {SERVICE_TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                   </select>
                 </div>
                 <div className="form-field">
                   <label>היקף שירות</label>
-                  <select value={editAgreement.service_scope || ''} onChange={e => setEditAgreement(p => ({ ...p, service_scope: e.target.value }))}>
+                  <select value={editAgreement.service_scope || ''} onChange={e => updAgr('service_scope', e.target.value)} disabled={ro} style={roStyle}>
                     <option value="">-- בחר --</option>
                     {SERVICE_SCOPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                   </select>
                 </div>
                 <div className="form-field">
                   <label>סטטוס</label>
-                  <select value={editAgreement.status || 'active'} onChange={e => setEditAgreement(p => ({ ...p, status: e.target.value }))}>
-                    {STATUS_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  <select value={editAgreement.status || 'active'} onChange={e => updAgr('status', e.target.value)} disabled={ro} style={roStyle}>
+                    {customerStatuses.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                   </select>
                 </div>
               </div>
               <div className="form-field" style={{ marginTop: 12 }}>
-                <label>שם הסכם (נוצר אוטומטית)</label>
-                <input value={editAgreement.agreement_name || ''} onChange={e => setEditAgreement(p => ({ ...p, agreement_name: e.target.value }))}
-                  placeholder="ייווצר אוטומטית" style={{ background: '#F0FDF4', fontWeight: 600, color: '#166534' }} />
+                <label>שם הסכם</label>
+                <input value={editAgreement.agreement_name || ''} onChange={e => updAgr('agreement_name', e.target.value)}
+                  placeholder="ייווצר אוטומטית" readOnly={ro} style={ro ? roStyle : { background: '#F0FDF4', fontWeight: 600, color: '#166534' }} />
               </div>
 
               <h3 className="form-section-title">תקופה ותנאים</h3>
@@ -662,16 +664,18 @@ export default function CustomerDetailPage() {
                 <div className="form-field">
                   <label>תאריך התחלה</label>
                   <input type="date" value={editAgreement.start_date ? editAgreement.start_date.split('T')[0] : ''} onChange={e => {
+                    if (ro) return;
                     const sd = e.target.value;
                     setEditAgreement(p => ({ ...p, start_date: sd, end_date: sd && p.period_months ? (() => { const d = new Date(sd); d.setMonth(d.getMonth() + parseInt(p.period_months)); return d.toISOString().split('T')[0]; })() : p.end_date }));
-                  }} dir="ltr" />
+                  }} dir="ltr" readOnly={ro} style={roStyle} />
                 </div>
                 <div className="form-field">
                   <label>תקופה (חודשים)</label>
                   <input type="number" value={editAgreement.period_months || ''} onChange={e => {
+                    if (ro) return;
                     const pm = e.target.value;
                     setEditAgreement(p => ({ ...p, period_months: pm, end_date: p.start_date && pm ? (() => { const d = new Date(p.start_date); d.setMonth(d.getMonth() + parseInt(pm)); return d.toISOString().split('T')[0]; })() : p.end_date }));
-                  }} dir="ltr" min="1" />
+                  }} dir="ltr" min="1" readOnly={ro} style={roStyle} />
                 </div>
                 <div className="form-field">
                   <label>תאריך סיום</label>
@@ -679,7 +683,7 @@ export default function CustomerDetailPage() {
                 </div>
                 <div className="form-field">
                   <label>חידוש אוטומטי</label>
-                  <select value={editAgreement.auto_renew || 'no'} onChange={e => setEditAgreement(p => ({ ...p, auto_renew: e.target.value }))}>
+                  <select value={editAgreement.auto_renew || 'no'} onChange={e => updAgr('auto_renew', e.target.value)} disabled={ro} style={roStyle}>
                     {AUTO_RENEW_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                   </select>
                 </div>
@@ -687,15 +691,15 @@ export default function CustomerDetailPage() {
 
               <h3 className="form-section-title">פרטים נוספים</h3>
               <div className="form-grid">
-                <OwnerSelect value={editAgreement.owner_id} onChange={v => setEditAgreement(p => ({ ...p, owner_id: v }))} label="בעלי רשומה הסכם שירות" />
+                <OwnerSelect value={editAgreement.owner_id} onChange={v => updAgr('owner_id', v)} label="בעלי רשומה הסכם שירות" disabled={ro} />
                 <div className="form-field">
                   <label>מספר CRM חיצוני</label>
-                  <input value={editAgreement.crm_customer_num || ''} onChange={e => setEditAgreement(p => ({ ...p, crm_customer_num: e.target.value }))} dir="ltr" />
+                  <input value={editAgreement.crm_customer_num || ''} onChange={e => updAgr('crm_customer_num', e.target.value)} dir="ltr" readOnly={ro} style={roStyle} />
                 </div>
               </div>
               <div className="form-field" style={{ marginTop: 12 }}>
                 <label>תיאור / תנאים מיוחדים</label>
-                <textarea value={editAgreement.description || ''} onChange={e => setEditAgreement(p => ({ ...p, description: e.target.value }))} rows={2} placeholder="הערות, תנאים מיוחדים..." />
+                <textarea value={editAgreement.description || ''} onChange={e => updAgr('description', e.target.value)} rows={2} placeholder="הערות, תנאים מיוחדים..." readOnly={ro} style={roStyle} />
               </div>
 
               {/* Sites under agreement — badge chips */}
@@ -737,15 +741,18 @@ export default function CustomerDetailPage() {
               })()}
 
               <div className="modal-footer">
-                <button type="button" className="btn btn-ghost" onClick={() => setEditAgreement(null)}>ביטול</button>
-                <button type="submit" className="btn btn-primary" disabled={createAgreementMut.isPending || updateAgreementMut.isPending}>
-                  {(createAgreementMut.isPending || updateAgreementMut.isPending) ? 'שומר...' : editAgreement.id ? 'עדכון' : 'יצירה'}
-                </button>
+                <button type="button" className="btn btn-ghost" onClick={() => setEditAgreement(null)}>{ro ? 'סגור' : 'ביטול'}</button>
+                {!ro && canUseButton('btn_save_agreement') && (
+                  <button type="submit" className="btn btn-primary" disabled={createAgreementMut.isPending || updateAgreementMut.isPending}>
+                    {(createAgreementMut.isPending || updateAgreementMut.isPending) ? 'שומר...' : 'שמור'}
+                  </button>
+                )}
               </div>
             </form>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Delete Related Entity Confirm */}
       {confirmDelRelated && (
@@ -793,7 +800,7 @@ export default function CustomerDetailPage() {
 
 // ── Info Tab ──────────────────────────────────────────────────────────────────
 
-function InfoTab({ customer }) {
+function InfoTab({ customer, clientTypes, paymentTerms }) {
   const c = customer;
   const ReadOnlyField = ({ label, value }) => (
     <div className="form-field">
@@ -807,7 +814,7 @@ function InfoTab({ customer }) {
       <h3 className="form-section-title">פרטי חברה</h3>
       <div className="form-grid">
         <ReadOnlyField label="מספר לקוח" value={c.cust_num} />
-        <ReadOnlyField label="סוג לקוח" value={getClientTypeLabel(c.client_type)} />
+        <ReadOnlyField label="סוג לקוח" value={lookupLabel(clientTypes, c.client_type)} />
         <ReadOnlyField label="ח.פ / ע.מ" value={c.reg_num} />
         <ReadOnlyField label="תאריך יצירה" value={c.created_at ? new Date(c.created_at).toLocaleDateString('he-IL') : null} />
       </div>
@@ -830,7 +837,7 @@ function InfoTab({ customer }) {
 
       <h3 className="form-section-title">תנאים מסחריים</h3>
       <div className="form-grid">
-        <ReadOnlyField label="תנאי תשלום" value={(PAYMENT_TERMS.find(([v]) => v === c.payment_terms) || ['', null])[1]} />
+        <ReadOnlyField label="תנאי תשלום" value={lookupLabel(paymentTerms, c.payment_terms)} />
         <ReadOnlyField label="מטבע" value={(CURRENCIES.find(([v]) => v === c.currency) || ['', null])[1]} />
         <ReadOnlyField label="מסגרת אשראי" value={c.credit_limit ? `₪${Number(c.credit_limit).toLocaleString()}` : null} />
       </div>
@@ -849,8 +856,9 @@ function InfoTab({ customer }) {
 
 // ── Related Tab (generic) ────────────────────────────────────────────────────
 
-function RelatedTab({ title, items, columns, onAdd, addLabel, onEdit, onDelete }) {
-  const hasActions = onEdit || onDelete;
+function RelatedTab({ title, items, columns, onAdd, addLabel, onEdit, onView, onDelete }) {
+  const clickHandler = onEdit || onView;
+  const hasActions = onEdit || onView || onDelete;
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -878,9 +886,9 @@ function RelatedTab({ title, items, columns, onAdd, addLabel, onEdit, onDelete }
             <tbody>
               {items.map(item => (
                 <tr key={item.id}
-                  onClick={() => onEdit && onEdit(item)}
-                  style={{ cursor: onEdit ? 'pointer' : 'default' }}
-                  onMouseOver={e => { if (onEdit) e.currentTarget.style.background = 'var(--accent-light)'; }}
+                  onClick={() => clickHandler && clickHandler(item)}
+                  style={{ cursor: clickHandler ? 'pointer' : 'default' }}
+                  onMouseOver={e => { if (clickHandler) e.currentTarget.style.background = 'var(--accent-light)'; }}
                   onMouseOut={e => e.currentTarget.style.background = ''}>
                   {columns.map(col => (
                     <td key={col.key}>
@@ -891,6 +899,7 @@ function RelatedTab({ title, items, columns, onAdd, addLabel, onEdit, onDelete }
                     <td onClick={e => e.stopPropagation()}>
                       <div style={{ display: 'flex', gap: 4 }}>
                         {onEdit && <button className="action-btn edit" onClick={() => onEdit(item)} title="ערוך"><i className="ti ti-edit" aria-hidden="true" /></button>}
+                        {onView && !onEdit && <button className="action-btn" onClick={() => onView(item)} title="צפייה" style={{ color: '#6B7280' }}><i className="ti ti-eye" aria-hidden="true" /></button>}
                         {onDelete && <button className="action-btn delete" onClick={() => onDelete(item)} title="מחק"><i className="ti ti-trash" aria-hidden="true" /></button>}
                       </div>
                     </td>
@@ -907,9 +916,16 @@ function RelatedTab({ title, items, columns, onAdd, addLabel, onEdit, onDelete }
 
 // ── Placeholder Tab (for future modules) ─────────────────────────────────────
 
-function PlaceholderTab({ icon, title, description }) {
+function PlaceholderTab({ icon, title, description, addLabel }) {
   return (
     <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+      {addLabel && (
+        <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 16 }}>
+          <button className="btn btn-primary" disabled style={{ fontSize: 12, padding: '6px 14px', opacity: 0.5, cursor: 'not-allowed' }} title="בקרוב">
+            <Icon svg={ICONS.plus} size={14} /> {addLabel}
+          </button>
+        </div>
+      )}
       <div style={{
         width: 56, height: 56, borderRadius: 16,
         background: 'var(--accent-light)', color: 'var(--accent)',

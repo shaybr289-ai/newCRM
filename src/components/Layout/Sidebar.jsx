@@ -3,6 +3,9 @@ import { useState, useEffect } from 'react';
 import { Icon, ICONS } from '../../utils/icons';
 import { MODULES } from '../../utils/modules';
 import useAuthStore from '../../store/authStore';
+import { canViewModule } from '../../hooks/usePerms';
+import { useT } from '../../hooks/useT';
+import MfaSetupModal from '../Auth/MfaSetupModal';
 import './Sidebar.css';
 
 /* ── Module groups ─────────────────────────────────────────────────────────── */
@@ -17,7 +20,7 @@ const GROUPS = [
     id: 'sales',
     label: 'מכירות ומסחר',
     icon: `<svg width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><line x1='12' y1='1' x2='12' y2='23'/><path d='M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'/></svg>`,
-    ids: ['products', 'quotes', 'orders', 'deliverynotes', 'deals'],
+    ids: ['products', 'quotes', 'orders', 'deliverynotes', 'deals', 'leads'],
   },
   {
     id: 'ops',
@@ -29,7 +32,7 @@ const GROUPS = [
     id: 'mgmt',
     label: 'ניהול מערכת',
     icon: `<svg width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><circle cx='12' cy='12' r='3'/><path d='M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42'/></svg>`,
-    ids: ['datamanagement', 'ai', 'reports', 'users', 'bulkupdate'],
+    ids: ['datamanagement', 'ai', 'dashboards', 'reports', 'users', 'bulkupdate'],
   },
 ];
 
@@ -41,7 +44,9 @@ function initials(firstName, lastName) {
 /* ── Component ─────────────────────────────────────────────────────────────── */
 export default function Sidebar() {
   const { user, logout } = useAuthStore();
+  const { t } = useT();
   const [collapsed, setCollapsed] = useState(false);
+  const [showMfa, setShowMfa] = useState(false);
 
   /* sync collapsed state → body attribute so MainLayout CSS can react */
   useEffect(() => {
@@ -49,9 +54,10 @@ export default function Sidebar() {
     return () => document.body.removeAttribute('data-sidebar');
   }, [collapsed]);
 
-  const visible = MODULES.filter(
-    m => !m.adminOnly || user?.userType === 'superAdmin' || user?.userType === 'admin'
-  );
+  const visible = MODULES.filter(m => {
+    if (m.adminOnly && user?.userType !== 'superAdmin' && user?.userType !== 'admin') return false;
+    return canViewModule(user, m.id);
+  });
 
   return (
     <aside className={`fo-sb ${collapsed ? 'fo-sb--collapsed' : ''}`}>
@@ -83,10 +89,10 @@ export default function Sidebar() {
           to="/"
           end
           className={({ isActive }) => `fo-sb__item${isActive ? ' fo-sb__item--active' : ''}`}
-          title={collapsed ? 'ראשי' : undefined}
+          title={collapsed ? t('ראשי') || 'Home' : undefined}
         >
           <span className="fo-sb__item-icon"><Icon svg={ICONS.home} size={17} /></span>
-          {!collapsed && <span className="fo-sb__item-label">ראשי</span>}
+          {!collapsed && <span className="fo-sb__item-label">{t('ראשי') || 'Home'}</span>}
         </NavLink>
 
         {/* Groups */}
@@ -106,7 +112,7 @@ export default function Sidebar() {
                       className="fo-sb__group-icon"
                       dangerouslySetInnerHTML={{ __html: group.icon }}
                     />
-                    {group.label}
+                    {t(group.label)}
                   </div>
                 )
               }
@@ -118,14 +124,14 @@ export default function Sidebar() {
                   className={({ isActive }) =>
                     `fo-sb__item${isActive ? ' fo-sb__item--active' : ''}`
                   }
-                  title={collapsed ? mod.label : undefined}
+                  title={collapsed ? t(mod.label) : undefined}
                 >
                   <span className="fo-sb__item-icon">
                     <Icon svg={ICONS[mod.icon] || ICONS.home} size={17} />
                   </span>
                   {!collapsed && (
                     <>
-                      <span className="fo-sb__item-label">{mod.label}</span>
+                      <span className="fo-sb__item-label">{t(mod.label)}</span>
                       <span
                         className="fo-sb__item-dot"
                         style={{ background: mod.color }}
@@ -156,6 +162,17 @@ export default function Sidebar() {
         </div>
 
         <button
+          className="fo-sb__item"
+          onClick={() => setShowMfa(true)}
+          title="אימות דו-שלבי (MFA)"
+          style={{ opacity: 0.75 }}
+        >
+          <span className="fo-sb__item-icon">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg>
+          </span>
+          {!collapsed && <span className="fo-sb__item-label">אימות דו-שלבי</span>}
+        </button>
+        <button
           className="fo-sb__item fo-sb__logout"
           onClick={logout}
           title="יציאה"
@@ -164,6 +181,8 @@ export default function Sidebar() {
           {!collapsed && <span className="fo-sb__item-label">יציאה</span>}
         </button>
       </div>
+
+      {showMfa && <MfaSetupModal onClose={() => setShowMfa(false)} />}
 
     </aside>
   );

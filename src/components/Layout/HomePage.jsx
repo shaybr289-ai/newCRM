@@ -3,6 +3,7 @@ import { Icon, ICONS } from '../../utils/icons';
 import { MODULES } from '../../utils/modules';
 import { useCompanyInfo } from '../../hooks/useDataManagement';
 import useAuthStore from '../../store/authStore';
+import { canViewModule } from '../../hooks/usePerms';
 
 export default function HomePage() {
   const user = useAuthStore(s => s.user);
@@ -47,7 +48,7 @@ export default function HomePage() {
         gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
         gap: 18,
       }}>
-        {MODULES.filter(m => !m.adminOnly).map(mod => (
+        {MODULES.filter(m => !m.adminOnly && canViewModule(user, m.id)).map(mod => (
           <ModuleTile key={mod.id} mod={mod} />
         ))}
       </div>

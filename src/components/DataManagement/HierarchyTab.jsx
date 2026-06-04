@@ -13,7 +13,7 @@ import './Hierarchy.css';
 
 const FAMILY_TYPES = [['onetime', 'חד"פ'], ['recurring', 'שוטף']];
 
-export default function HierarchyTab() {
+export default function HierarchyTab({ readOnly = false }) {
   const { data: catData } = useCategories();
   const { data: famData } = useFamilies();
   const { data: levelData } = useFamilyLevels();
@@ -146,11 +146,13 @@ export default function HierarchyTab() {
             <bdi>{fam.name}</bdi>
           </span>
           <span className="hier-node-meta">· {levelLabel} · {fam.family_type === 'recurring' ? 'שוטף' : 'חד"פ'}</span>
-          <span className="hier-node-actions">
-            <button className="hier-node-action" title="הוסף תת־משפחה" onClick={() => openCreateSubFamily(fam)} aria-label="הוסף תת-משפחה"><i className="ti ti-plus" aria-hidden="true" /></button>
-            <button className="hier-node-action" title="ערוך" onClick={() => openEditFamily(fam)} aria-label="ערוך"><i className="ti ti-edit" aria-hidden="true" /></button>
-            <button className="hier-node-action danger" title="מחק" onClick={() => setDel({ kind: 'family', data: fam })} aria-label="מחק"><i className="ti ti-trash" aria-hidden="true" /></button>
-          </span>
+          {!readOnly && (
+            <span className="hier-node-actions">
+              <button className="hier-node-action" title="הוסף תת־משפחה" onClick={() => openCreateSubFamily(fam)} aria-label="הוסף תת-משפחה"><i className="ti ti-plus" aria-hidden="true" /></button>
+              <button className="hier-node-action" title="ערוך" onClick={() => openEditFamily(fam)} aria-label="ערוך"><i className="ti ti-edit" aria-hidden="true" /></button>
+              <button className="hier-node-action danger" title="מחק" onClick={() => setDel({ kind: 'family', data: fam })} aria-label="מחק"><i className="ti ti-trash" aria-hidden="true" /></button>
+            </span>
+          )}
         </div>
         {!isCollapsed && fam.children?.length > 0 && (
           <div className="hier-children">
@@ -178,11 +180,13 @@ export default function HierarchyTab() {
             <bdi>{cat.name}</bdi>
           </span>
           <span className="hier-node-meta">· קטגוריה</span>
-          <span className="hier-node-actions">
-            <button className="hier-node-action" title="הוסף משפחת מוצר" onClick={() => openCreateRootFamily(cat.id)} aria-label="הוסף משפחת מוצר"><i className="ti ti-plus" aria-hidden="true" /></button>
-            <button className="hier-node-action" title="ערוך" onClick={() => openEditCategory(cat)} aria-label="ערוך"><i className="ti ti-edit" aria-hidden="true" /></button>
-            <button className="hier-node-action danger" title="מחק" onClick={() => setDel({ kind: 'category', data: cat })} aria-label="מחק"><i className="ti ti-trash" aria-hidden="true" /></button>
-          </span>
+          {!readOnly && (
+            <span className="hier-node-actions">
+              <button className="hier-node-action" title="הוסף משפחת מוצר" onClick={() => openCreateRootFamily(cat.id)} aria-label="הוסף משפחת מוצר"><i className="ti ti-plus" aria-hidden="true" /></button>
+              <button className="hier-node-action" title="ערוך" onClick={() => openEditCategory(cat)} aria-label="ערוך"><i className="ti ti-edit" aria-hidden="true" /></button>
+              <button className="hier-node-action danger" title="מחק" onClick={() => setDel({ kind: 'category', data: cat })} aria-label="מחק"><i className="ti ti-trash" aria-hidden="true" /></button>
+            </span>
+          )}
         </div>
         {!isCollapsed && cat.families?.length > 0 && (
           <div className="hier-children">
@@ -270,12 +274,16 @@ export default function HierarchyTab() {
         <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
           ⋮⋮ גרור משפחה כדי לשנות סדר (המספור יתעדכן אוטומטית)
         </span>
-        <button className="btn btn-secondary" style={{ fontSize: 12 }} onClick={() => setShowLevelDefs(true)}>
-          הגדרת שמות רמות
-        </button>
-        <button className="btn btn-primary" style={{ fontSize: 12 }} onClick={openCreateCategory}>
-          + קטגוריה חדשה
-        </button>
+        {!readOnly && (
+          <>
+            <button className="btn btn-secondary" style={{ fontSize: 12 }} onClick={() => setShowLevelDefs(true)}>
+              הגדרת שמות רמות
+            </button>
+            <button className="btn btn-primary" style={{ fontSize: 12 }} onClick={openCreateCategory}>
+              + קטגוריה חדשה
+            </button>
+          </>
+        )}
       </div>
 
       <div className="hier-canvas">

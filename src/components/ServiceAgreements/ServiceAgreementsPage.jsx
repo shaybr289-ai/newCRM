@@ -1,24 +1,52 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { api } from '../../api/client';
 import { useServiceAgreements, useCreateAgreement, useUpdateAgreement, useDeleteAgreement } from '../../hooks/useServiceAgreements';
 import { useCustomers } from '../../hooks/useCustomers';
 import { useContacts } from '../../hooks/useContacts';
 import { useSites } from '../../hooks/useSites';
-import { SA_COLUMNS, EMPTY_AGREEMENT, AGREEMENT_TYPES, SERVICE_TYPES, SERVICE_SCOPES, AUTO_RENEW_OPTIONS, STATUS_OPTIONS } from '../../utils/constants';
+import { SA_COLUMNS, EMPTY_AGREEMENT, AGREEMENT_TYPES, SERVICE_TYPES, SERVICE_SCOPES, AUTO_RENEW_OPTIONS } from '../../utils/constants';
+import { useLookups } from '../../hooks/useLookups';
 import { Icon, ICONS } from '../../utils/icons';
 import DataTable from '../Layout/DataTable';
 import ModuleTopbar from '../Layout/ModuleTopbar';
 import OwnerSelect from '../Layout/OwnerSelect';
 import StatsBar from '../Layout/StatsBar';
+import { usePerms } from '../../hooks/usePerms';
+import DeleteConfirmModal from '../Layout/DeleteConfirmModal';
 import '../Layout/EditorPage.css';
 import '../Customers/CustomerModal.css';
 
 export default function ServiceAgreementsPage() {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { canView, canCreate, canEdit, canDelete, canUseButton } = usePerms('serviceagreements');
+  const { customerStatuses } = useLookups();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [customerFilter, setCustomerFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [editItem, setEditItem] = useState(null);
+  const [viewOnly, setViewOnly] = useState(false);
   const [confirmDel, setConfirmDel] = useState(null);
+
+  useEffect(() => {
+    const editId = searchParams.get('edit');
+    const viewId = searchParams.get('view');
+    const isNew = searchParams.get('new');
+    const custId = searchParams.get('customer_id');
+    if (editId) {
+      setSearchParams({}, { replace: true });
+      api.get(`/api/service-agreements/${editId}`).then(item => { if (item) { setViewOnly(false); setEditItem(item); } });
+    } else if (viewId) {
+      setSearchParams({}, { replace: true });
+      api.get(`/api/service-agreements/${viewId}`).then(item => { if (item) { setViewOnly(true); setEditItem(item); } });
+    } else if (isNew) {
+      setSearchParams({}, { replace: true });
+      setViewOnly(false);
+      setEditItem({ ...EMPTY_AGREEMENT, customer_id: custId || '' });
+    }
+  }, [searchParams]); // eslint-disable-line
 
   const { data, isLoading, error } = useServiceAgreements({ page, limit: 50, search, customerId: customerFilter });
   const { data: custData } = useCustomers({ limit: 500 });
@@ -120,6 +148,7 @@ export default function ServiceAgreementsPage() {
   const handleDelete = async () => {
     if (!confirmDel) return;
     await deleteMut.mutateAsync(confirmDel.id);
+    if (editItem?.id === confirmDel.id) setEditItem(null);
     setConfirmDel(null);
   };
 
@@ -136,19 +165,33 @@ export default function ServiceAgreementsPage() {
       <div className="tdb-topbar" style={{ marginBottom: 16 }}>
         <div className="tdb-topbar-left">
           <button className="tdb-calendar-btn" onClick={() => setEditItem(null)}>← חזרה להסכמים</button>
+          {editItem.customer_id && (
+            <button className="tdb-calendar-btn" onClick={() => navigate(`/customers/${editItem.customer_id}`)}>
+              <i className="ti ti-building-store" aria-hidden="true" /> לכרטיס לקוח
+            </button>
+          )}
           <span className="tdb-topbar-icon"><i className="ti ti-file-description" aria-hidden="true" /></span>
           <div>
-            <h1 className="tdb-topbar-title">{editItem.id ? `עריכת הסכם — ${editItem.agreement_name || ''}` : 'הסכם שירות חדש'}</h1>
+            <h1 className="tdb-topbar-title">{viewOnly ? `צפייה — ${editItem.agreement_name || ''}` : editItem.id ? `עריכת הסכם — ${editItem.agreement_name || ''}` : 'הסכם שירות חדש'}</h1>
             {editItem.agreement_num && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 1 }}>#{editItem.agreement_num}</div>}
           </div>
+          {viewOnly && <span style={{ fontSize: 11, background: '#FEF3C7', color: '#92400E', border: '1px solid #F59E0B66', borderRadius: 999, padding: '2px 10px', fontWeight: 600 }}>צפייה בלבד</span>}
         </div>
         <div className="tdb-topbar-right">
-          <button className="tdb-calendar-btn" style={{ background: 'rgba(255,255,255,0.9)', color: '#074876', fontWeight: 700 }} onClick={handleSave} disabled={createMut.isPending || updateMut.isPending}>
-            {(createMut.isPending || updateMut.isPending) ? 'שומר...' : 'שמור'}
-          </button>
+          {!viewOnly && editItem.id && canDelete && canUseButton('btn_delete') && (
+            <button className="tdb-calendar-btn" style={{ background: 'rgba(220,38,38,0.18)', borderColor: 'rgba(220,38,38,0.5)' }} onClick={() => setConfirmDel(editItem)}>
+              <i className="ti ti-trash" aria-hidden="true" /> מחק
+            </button>
+          )}
+          {!viewOnly && canUseButton('btn_save') && (
+            <button className="tdb-calendar-btn" style={{ background: 'rgba(255,255,255,0.9)', color: '#074876', fontWeight: 700 }} onClick={handleSave} disabled={createMut.isPending || updateMut.isPending}>
+              {(createMut.isPending || updateMut.isPending) ? 'שומר...' : 'שמור'}
+            </button>
+          )}
         </div>
       </div>
       <div className="card">
+        <fieldset disabled={viewOnly} style={{ border: 'none', padding: 0, margin: 0 }}>
               <h3 className="form-section-title">פרטי ההסכם</h3>
               <div className="form-grid">
                 <div className="form-field">
@@ -192,7 +235,7 @@ export default function ServiceAgreementsPage() {
                 <div className="form-field">
                   <label>סטטוס</label>
                   <select value={editItem.status || 'active'} onChange={e => upd('status', e.target.value)}>
-                    {STATUS_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    {customerStatuses.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                   </select>
                 </div>
               </div>
@@ -280,7 +323,7 @@ export default function ServiceAgreementsPage() {
                   </div>
                 );
               })()}
-
+        </fieldset>
       </div>
     </div>
   );
@@ -289,9 +332,11 @@ export default function ServiceAgreementsPage() {
   return (
     <>
       <ModuleTopbar icon="ti-file-certificate" title="הסכמי שירות">
-        <button className="tdb-calendar-btn" onClick={() => setEditItem({ ...EMPTY_AGREEMENT })}>
-          <i className="ti ti-plus" aria-hidden="true" /> הסכם חדש
-        </button>
+        {canCreate && canUseButton('btn_new') && (
+          <button className="tdb-calendar-btn" onClick={() => setEditItem({ ...EMPTY_AGREEMENT })}>
+            <i className="ti ti-plus" aria-hidden="true" /> הסכם חדש
+          </button>
+        )}
       </ModuleTopbar>
       <StatsBar stats={saStats} />
       <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -309,21 +354,20 @@ export default function ServiceAgreementsPage() {
       </div>
       <DataTable columns={SA_COLUMNS} data={filteredAgreements} total={data?.total || 0} page={page} totalPages={data?.totalPages || 1}
         isLoading={isLoading} error={error} onSearchChange={s => { setSearch(s); setPage(1); }} onPageChange={setPage}
-        onEdit={row => setEditItem({ ...row })} onDelete={row => setConfirmDel(row)}
+        onEdit={canEdit ? row => { setViewOnly(false); setEditItem({ ...row }); } : undefined}
+        onView={!canEdit && canView ? row => { setViewOnly(true); setEditItem({ ...row }); } : undefined}
+        onDelete={canDelete ? row => setConfirmDel(row) : undefined}
         renderCell={renderCell} storageKey="biz_sa_cols_v2" hideHeader
         customers={customers} onCustomerFilterChange={id => { setCustomerFilter(id); setPage(1); }} />
       {confirmDel && (
-        <div className="modal-overlay" onClick={() => setConfirmDel(null)}>
-          <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 400, padding: 24 }}>
-            <h3 style={{ marginBottom: 12 }}>מחיקת הסכם שירות</h3>
-            <p style={{ color: 'var(--text-2)', fontSize: 14, marginBottom: 8 }}>האם למחוק את <strong>{confirmDel.agreement_name || confirmDel.agreement_num}</strong>?</p>
-            <p style={{ color: 'var(--danger)', fontSize: 12, marginBottom: 20 }}>פעולה זו אינה הפיכה</p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn btn-ghost" onClick={() => setConfirmDel(null)}>ביטול</button>
-              <button className="btn btn-danger" onClick={handleDelete} disabled={deleteMut.isPending}>{deleteMut.isPending ? 'מוחק...' : 'מחק'}</button>
-            </div>
-          </div>
-        </div>
+        <DeleteConfirmModal
+          title="מחיקת הסכם שירות"
+          name={confirmDel.agreement_name || confirmDel.agreement_num}
+          cascade="מחיקת הסכם השירות תסיר אותו לצמיתות. פעולה זו אינה הפיכה."
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmDel(null)}
+          isPending={deleteMut.isPending}
+        />
       )}
     </>
   );

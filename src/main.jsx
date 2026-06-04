@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import { getAccessToken } from './api/client';
 import './styles/theme.css';
+import '@tabler/icons-webfont/dist/tabler-icons.min.css';
 
 // Bridge for shared field components (e.g. ModuleLookupField) — exposes the
 // in-memory access token and the API base path so /api lookups stay authenticated.

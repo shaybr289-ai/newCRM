@@ -104,7 +104,7 @@
 }
 
 .att-table tr:last-child td { border-bottom: none; }
-.att-table tr:hover td { background: var(--bg-hover); }
+.att-table tr:hover td { background: var(--accent-light); }
 
 /* ── Filters bar ───────────────────────────────────────────────────────────── */
 .att-filters {
@@ -271,4 +271,4 @@
 
 /* ── Overtime panel ────────────────────────────────────────────────────────── */
 .overtime-row { cursor: pointer; }
-.overtime-row:hover td { background: var(--bg-hover); }
+.overtime-row:hover td { background: var(--accent-light); }

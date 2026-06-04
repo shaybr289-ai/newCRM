@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Icon, ICONS } from '../../utils/icons';
+import { useT } from '../../hooks/useT';
 
 /**
  * Reusable DataTable with column picker, search, pagination, and column sorting.
@@ -25,6 +26,7 @@ export default function DataTable({
   onPageChange,
   onAdd,
   onEdit,
+  onView,
   onDelete,
   renderCell,        // (row, colKey) => ReactNode
   storageKey,        // localStorage key for column prefs
@@ -37,6 +39,7 @@ export default function DataTable({
   hideHeader = false,  // when true, skip page-header (use with ModuleTopbar)
   extraSearchContent = null,
 }) {
+  const { t } = useT();
   const [showColPicker, setShowColPicker] = useState(false);
 
   // ── Sort state ─────────────────────────────────────────────────────────────
@@ -184,7 +187,7 @@ export default function DataTable({
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className={`btn ${showColPicker ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setShowColPicker(p => !p)}>
-            עמודות ▾
+            {t('עמודות ▾')}
           </button>
           {onAdd && (
             <button className="btn btn-primary" onClick={onAdd}>
@@ -199,16 +202,16 @@ export default function DataTable({
       {showColPicker && (
         <div className="col-picker card">
           <div className="col-picker-header">
-            <h3>בחירת וסידור עמודות</h3>
+            <h3>{t('בחירת וסידור עמודות')}</h3>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn btn-ghost" onClick={() => saveVisibleCols(columns.map(c => c.key))}>הכל</button>
-              <button className="btn btn-ghost" onClick={() => saveVisibleCols([...defaultVisible])}>ברירת מחדל</button>
+              <button className="btn btn-ghost" onClick={() => saveVisibleCols(columns.map(c => c.key))}>{t('הכל')}</button>
+              <button className="btn btn-ghost" onClick={() => saveVisibleCols([...defaultVisible])}>{t('ברירת מחדל')}</button>
             </div>
           </div>
           <div className="col-picker-sections">
             {Object.entries(colSections).map(([section, cols]) => (
               <div key={section} className="col-section">
-                <div className="col-section-title">{section}</div>
+                <div className="col-section-title">{t(section)}</div>
                 {cols.map(col => (
                   <label key={col.key} className="col-checkbox">
                     <input type="checkbox" checked={visibleCols.includes(col.key)} onChange={() => toggleCol(col.key)} />
@@ -219,7 +222,7 @@ export default function DataTable({
             ))}
           </div>
           <div className="col-order-section">
-            <div className="col-order-title">סדר העמודות — גרור לשינוי סדר</div>
+            <div className="col-order-title">{t('סדר העמודות — גרור לשינוי סדר')}</div>
             <div className="col-order-list">
               {visibleCols.map((key, idx) => {
                 const col = columns.find(c => c.key === key);
@@ -233,7 +236,7 @@ export default function DataTable({
                       saveVisibleCols(next); setDragIdx(null);
                     }}>
                     <span className="col-order-grip">⠿</span>
-                    <span>{col.label}</span>
+                    <span>{t(col.label)}</span>
                     <span className="col-order-num">{idx + 1}</span>
                   </div>
                 );
@@ -249,7 +252,7 @@ export default function DataTable({
           <div className="search-input-wrap">
             <Icon svg={ICONS.search} size={16} className="search-icon" />
             <input value={searchInput} onChange={e => setSearchInput(e.target.value)}
-              placeholder="חיפוש..." className="search-input" />
+              placeholder={t('חיפוש...')} className="search-input" />
             {searchInput && (
               <button type="button" className="search-clear"
                 onClick={() => { setSearchInput(''); onSearchChange(''); }}>&times;</button>
@@ -260,7 +263,7 @@ export default function DataTable({
               <div className="search-input-wrap">
                 <Icon svg={ICONS.search} size={16} className="search-icon" />
                 <input value={custInput} onChange={e => handleCustInput(e.target.value)}
-                  placeholder="חיפוש לפי לקוח..." className="search-input" style={{ minWidth: 180 }} />
+                  placeholder={t('חיפוש לפי לקוח...')} className="search-input" style={{ minWidth: 180 }} />
                 {custInput && (
                   <button type="button" className="search-clear" onClick={clearCustomer}>&times;</button>
                 )}
@@ -284,10 +287,10 @@ export default function DataTable({
             </div>
           )}
           {extraSearchContent}
-          <button type="submit" className="btn btn-secondary">חיפוש</button>
+          <button type="submit" className="btn btn-secondary">{t('חיפוש')}</button>
           {hideHeader && (
             <button type="button" className={`btn ${showColPicker ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setShowColPicker(p => !p)}>
-              עמודות ▾
+              {t('עמודות ▾')}
             </button>
           )}
         </form>
@@ -296,11 +299,11 @@ export default function DataTable({
       {/* Table */}
       <div className="table-card">
         {isLoading ? (
-          <div className="table-loading">טוען נתונים...</div>
+          <div className="table-loading">{t('טוען נתונים...')}</div>
         ) : error ? (
-          <div className="table-error">שגיאה: {error.message}</div>
+          <div className="table-error">{t('שגיאה')}: {error.message}</div>
         ) : data.length === 0 ? (
-          <div className="table-empty"><p>לא נמצאו רשומות</p></div>
+          <div className="table-empty"><p>{t('לא נמצאו רשומות')}</p></div>
         ) : (
           <>
             <div className="table-scroll">
@@ -322,7 +325,7 @@ export default function DataTable({
                           title={col.sortable ? (isActive ? (sortDir === 'asc' ? 'מיון עולה — לחץ לירידה' : 'מיון יורד — לחץ לעלייה') : 'לחץ למיון') : ''}
                         >
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            {col.label}
+                            {t(col.label)}
                             {col.sortable && (
                               <span style={{
                                 fontSize: 11, opacity: isActive ? 1 : 0.3,
@@ -336,35 +339,38 @@ export default function DataTable({
                         </th>
                       );
                     })}
-                    {(onEdit || onDelete) && <th style={{ width: 120 }}>פעולות</th>}
+                    {(onEdit || onView || onDelete) && <th style={{ width: 120 }}>{t('פעולות')}</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {displayedData.map(row => (
-                    <tr key={row.id} style={{ cursor: onEdit ? 'pointer' : 'default' }}
-                      onClick={() => onEdit?.(row)}
-                      onMouseOver={e => { if (onEdit) e.currentTarget.style.background = 'var(--accent-light)'; }}
+                    <tr key={row.id} style={{ cursor: (onEdit || onView) ? 'pointer' : 'default' }}
+                      onClick={() => onEdit ? onEdit(row) : onView?.(row)}
+                      onMouseOver={e => { if (onEdit || onView) e.currentTarget.style.background = 'var(--accent-light)'; }}
                       onMouseOut={e => e.currentTarget.style.background = ''}>
                       {activeCols.map(col => (
                         <td key={col.key}>{renderCell ? renderCell(row, col.key) : (row[col.key] || '—')}</td>
                       ))}
-                      {(onEdit || onDelete) && (
+                      {(onEdit || onView || onDelete) && (
                         <td onClick={e => e.stopPropagation()}>
                           <div className="table-actions">
                             {onEdit && (
-                              <button className="action-btn edit" onClick={() => onEdit(row)} title="עריכה">
+                              <button className="tbl-action-btn tbl-action-edit" onClick={() => onEdit(row)} title={t('עריכה')}>
                                 <i className="ti ti-edit" aria-hidden="true" />
+                                {t('עריכה')}
+                              </button>
+                            )}
+                            {onView && !onEdit && (
+                              <button className="tbl-action-btn tbl-action-edit" onClick={() => onView(row)} title={t('צפייה')}
+                                style={{ color: '#5B7FA6', borderColor: '#C5E3F7' }}>
+                                <i className="ti ti-eye" aria-hidden="true" />
+                                {t('צפייה')}
                               </button>
                             )}
                             {onDelete && (
-                              <button
-                                className="action-btn delete"
-                                onClick={() => onDelete(row)}
-                                title="מחיקה"
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', fontSize: 12, fontWeight: 600 }}
-                              >
-                                <i className="ti ti-trash" aria-hidden="true" style={{ fontSize: 13 }} />
-                                מחק
+                              <button className="tbl-action-btn tbl-action-delete" onClick={() => onDelete(row)} title={t('מחיקה')}>
+                                <i className="ti ti-trash" aria-hidden="true" />
+                                {t('מחק')}
                               </button>
                             )}
                           </div>
@@ -378,9 +384,9 @@ export default function DataTable({
 
             {totalPages > 1 && (
               <div className="pagination">
-                <button className="btn btn-ghost" disabled={page <= 1} onClick={() => onPageChange?.(page - 1)}>→ הקודם</button>
-                <span className="pagination-info">עמוד {page} מתוך {totalPages} ({total} תוצאות)</span>
-                <button className="btn btn-ghost" disabled={page >= totalPages} onClick={() => onPageChange?.(page + 1)}>הבא ←</button>
+                <button className="btn btn-ghost" disabled={page <= 1} onClick={() => onPageChange?.(page - 1)}>→ {t('הקודם')}</button>
+                <span className="pagination-info">{t('עמוד')} {page} {t('מתוך')} {totalPages} ({total} {t('תוצאות')})</span>
+                <button className="btn btn-ghost" disabled={page >= totalPages} onClick={() => onPageChange?.(page + 1)}>{t('הבא')} ←</button>
               </div>
             )}
           </>

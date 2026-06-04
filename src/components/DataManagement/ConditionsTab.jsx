@@ -29,7 +29,7 @@ function useBulkDeleteConditions() {
   return useMutation({ mutationFn: (ids) => api.post('/api/conditions/bulk-delete', { ids }), onSuccess: () => qc.invalidateQueries({ queryKey: ['conditions'] }) });
 }
 
-export default function ConditionsTab() {
+export default function ConditionsTab({ readOnly = false }) {
   const { data, isLoading } = useConditions();
   const { data: famData } = useFamilies();
   const createMut = useCreateCondition();
@@ -119,13 +119,15 @@ export default function ConditionsTab() {
             <div style={{ display: 'flex', gap: 8 }}>
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="חיפוש..." style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12, width: 180 }} />
               <button className="btn btn-secondary" onClick={handleExport} style={{ fontSize: 12 }}>יצוא</button>
-              <button className="btn btn-primary" onClick={() => setEdit({ cond_num: '', name: '', content: '', product_family_id: '', display_order: 0 })} style={{ fontSize: 12 }}>
-                <Icon svg={ICONS.plus} size={14} /> תנאי חדש
-              </button>
+              {!readOnly && (
+                <button className="btn btn-primary" onClick={() => setEdit({ cond_num: '', name: '', content: '', product_family_id: '', display_order: 0 })} style={{ fontSize: 12 }}>
+                  <Icon svg={ICONS.plus} size={14} /> תנאי חדש
+                </button>
+              )}
             </div>
           </div>
 
-          <BulkDeleteBar selectedCount={selectedIds.size} totalCount={items.length} onSelectAll={toggleAll} onClear={() => setSelectedIds(new Set())} onDelete={() => setBulkConfirm(true)} isDeleting={bulkDeleteMut.isPending} />
+          {!readOnly && <BulkDeleteBar selectedCount={selectedIds.size} totalCount={items.length} onSelectAll={toggleAll} onClear={() => setSelectedIds(new Set())} onDelete={() => setBulkConfirm(true)} isDeleting={bulkDeleteMut.isPending} />}
 
           {isLoading ? <p style={{ color: 'var(--text-3)', textAlign: 'center', padding: 40 }}>טוען...</p> : (
             <table className="dm-table">
@@ -169,10 +171,18 @@ export default function ConditionsTab() {
                             : '—'}
                         </td>
                         <td onClick={e => e.stopPropagation()}>
-                          <div className="table-actions">
-                            <button className="action-btn edit" onClick={() => setEdit({ ...c })} title="ערוך"><i className="ti ti-edit" aria-hidden="true" /></button>
-                            <button className="action-btn delete" onClick={() => setDel(c)} title="מחק"><i className="ti ti-trash" aria-hidden="true" /></button>
-                          </div>
+                          {!readOnly && (
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              <button onClick={() => setEdit({ ...c })} title="ערוך"
+                                style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid #BFDBFE', background: 'transparent', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB' }}>
+                                <i className="ti ti-edit" aria-hidden="true" />
+                              </button>
+                              <button onClick={() => setDel(c)} title="מחק"
+                                style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid #FECACA', background: 'transparent', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#DC2626' }}>
+                                <i className="ti ti-trash" aria-hidden="true" />
+                              </button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                       {isExpanded && (
@@ -225,7 +235,7 @@ export default function ConditionsTab() {
       )}
 
       {/* ── Families Tab ───────────────────────────────────────────── */}
-      {subTab === 'families' && <FamiliesLinkTab conditions={conditions} families={families} updateMut={updateMut} />}
+      {subTab === 'families' && <FamiliesLinkTab conditions={conditions} families={families} updateMut={updateMut} readOnly={readOnly} />}
 
       {/* ── Import Tab ─────────────────────────────────────────────── */}
       {subTab === 'import' && <ImportTab conditions={conditions} families={families} createMut={createMut} genCondNum={genCondNum} />}
@@ -340,7 +350,7 @@ export default function ConditionsTab() {
 
 // ── Families Link Sub-Tab ────────────────────────────────────────────────────
 
-function FamiliesLinkTab({ conditions, families, updateMut }) {
+function FamiliesLinkTab({ conditions, families, updateMut, readOnly = false }) {
   const [selFamId, setSelFamId] = useState('');
 
   const selFamily = families.find(f => f.id === selFamId);
@@ -378,20 +388,22 @@ function FamiliesLinkTab({ conditions, families, updateMut }) {
                     <td style={{ textAlign: 'center', color: 'var(--accent)', fontWeight: 700 }}>{i + 1}</td>
                     <td style={{ fontWeight: 600, color: '#3B82F6' }}>{c.name}</td>
                     <td style={{ fontSize: 12, color: 'var(--text-2)', maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.content || '—'}</td>
-                    <td><button className="action-btn delete" onClick={() => unlinkCond(c.id)} title="הסר שיוך"><i className="ti ti-x" aria-hidden="true" /></button></td>
+                    <td>{!readOnly && <button className="action-btn delete" onClick={() => unlinkCond(c.id)} title="הסר שיוך"><i className="ti ti-x" aria-hidden="true" /></button>}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
 
-          <div className="form-field" style={{ maxWidth: 400 }}>
-            <label>הוסף תנאי למשפחה</label>
-            <select onChange={e => { if (e.target.value) { linkCond(e.target.value); e.target.value = ''; } }}>
-              <option value="">-- בחר תנאי להוספה --</option>
-              {unlinkedConds.map(c => <option key={c.id} value={c.id}>{c.cond_num ? `${c.cond_num} — ` : ''}{c.name}</option>)}
-            </select>
-          </div>
+          {!readOnly && (
+            <div className="form-field" style={{ maxWidth: 400 }}>
+              <label>הוסף תנאי למשפחה</label>
+              <select onChange={e => { if (e.target.value) { linkCond(e.target.value); e.target.value = ''; } }}>
+                <option value="">-- בחר תנאי להוספה --</option>
+                {unlinkedConds.map(c => <option key={c.id} value={c.id}>{c.cond_num ? `${c.cond_num} — ` : ''}{c.name}</option>)}
+              </select>
+            </div>
+          )}
         </>
       )}
     </div>

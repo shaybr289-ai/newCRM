@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   useFormFull, useUpdateForm, usePublishForm, useArchiveForm,
   useCreateSection, useUpdateSection, useDeleteSection,
@@ -45,6 +45,8 @@ function DebugPanel({ open, onClose }) {
 export default function FormBuilderPage() {
   const { id: formId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const viewOnly = searchParams.get('viewOnly') === '1';
 
   const { data: full, isLoading, error } = useFormFull(formId);
   const updateForm = useUpdateForm();
@@ -266,42 +268,46 @@ export default function FormBuilderPage() {
           <input
             value={formData.name || ''}
             placeholder="שם הטופס..."
-            onChange={(e) => handleFormChange({ name: e.target.value })}
+            onChange={(e) => !viewOnly && handleFormChange({ name: e.target.value })}
+            readOnly={viewOnly}
           />
           <span className={`status-pill status-${formData.status}`}>
             {formData.status === 'active' ? 'פעיל' : (formData.status === 'archived' ? 'לא פעיל' : 'טיוטה')}
           </span>
-          {savingNote && <span className="saving-note">{savingNote}</span>}
+          {viewOnly && <span style={{ fontSize: 11, background: '#FEF3C7', color: '#92400E', border: '1px solid #F59E0B66', borderRadius: 999, padding: '2px 10px', fontWeight: 600, marginRight: 8 }}>צפייה בלבד</span>}
+          {!viewOnly && savingNote && <span className="saving-note">{savingNote}</span>}
         </div>
-        <div className="builder-topbar-actions">
-          <button
-            className="btn btn-secondary"
-            onClick={() => setDebugOpen((v) => !v)}
-            title="פאנל אירועים"
-          aria-label="פאנל אירועים"><i className="ti ti-bug" aria-hidden="true" /></button>
-          <button
-            className="btn btn-secondary"
-            onClick={() => window.open(`/forms/${formId}/preview`, '_blank')}
-            title="פתח תצוגה מקדימה בכרטיסייה חדשה"
-          ><i className="ti ti-eye" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> תצוגה מקדימה</button>
-          <button
-            className={`btn ${formData.status === 'active' ? 'btn-warning-soft' : 'btn-primary'}`}
-            onClick={handlePublishToggle}
-            disabled={publishForm.isPending || archiveForm.isPending}
-            title={formData.status === 'active'
-              ? 'השבת — הטופס לא יוצג למשתמשי המובייל'
-              : 'הפעל — הטופס יסונכרן למובייל'}
-          >
-            {formData.status === 'active' ? <><i className="ti ti-player-pause" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> השבת</> : <><i className="ti ti-upload" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> הפעל</>}
-          </button>
-        </div>
+        {!viewOnly && (
+          <div className="builder-topbar-actions">
+            <button
+              className="btn btn-secondary"
+              onClick={() => setDebugOpen((v) => !v)}
+              title="פאנל אירועים"
+            aria-label="פאנל אירועים"><i className="ti ti-bug" aria-hidden="true" /></button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => window.open(`/forms/${formId}/preview`, '_blank')}
+              title="פתח תצוגה מקדימה בכרטיסייה חדשה"
+            ><i className="ti ti-eye" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> תצוגה מקדימה</button>
+            <button
+              className={`btn ${formData.status === 'active' ? 'btn-warning-soft' : 'btn-primary'}`}
+              onClick={handlePublishToggle}
+              disabled={publishForm.isPending || archiveForm.isPending}
+              title={formData.status === 'active'
+                ? 'השבת — הטופס לא יוצג למשתמשי המובייל'
+                : 'הפעל — הטופס יסונכרן למובייל'}
+            >
+              {formData.status === 'active' ? <><i className="ti ti-player-pause" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> השבת</> : <><i className="ti ti-upload" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> הפעל</>}
+            </button>
+          </div>
+        )}
       </header>
 
       <div className="builder-body">
-        <FieldPalette onAddField={(type) => handleAddField(type)} />
+        {!viewOnly && <FieldPalette onAddField={(type) => handleAddField(type)} />}
 
-        <main className="builder-canvas-wrap" onClick={handleSelectForm}>
-          <div className="builder-canvas">
+        <main className="builder-canvas-wrap" onClick={viewOnly ? undefined : handleSelectForm}>
+          <div className="builder-canvas" style={viewOnly ? { pointerEvents: 'none' } : {}}>
             {sections.length === 0 && (
               <div className="canvas-empty">
                 <h3>הטופס ריק</h3>
@@ -331,7 +337,7 @@ export default function FormBuilderPage() {
               />
             ))}
 
-            {sections.length > 0 && (
+            {!viewOnly && sections.length > 0 && (
               <div style={{ textAlign: 'center', padding: '12px 0' }}>
                 <button className="btn btn-ghost" onClick={handleAddSection}>
                   <i className="ti ti-plus" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> הוסף אזור חדש
@@ -341,7 +347,7 @@ export default function FormBuilderPage() {
           </div>
         </main>
 
-        <PropertiesPanel
+        {!viewOnly && <PropertiesPanel
           field={selectedField}
           section={selectedSection}
           formData={selectedField || selectedSection ? null : formData}
@@ -353,7 +359,7 @@ export default function FormBuilderPage() {
           sections={sections}
           rules={rules}
           onRulesChange={setRules}
-        />
+        />}
       </div>
 
       <DebugPanel open={debugOpen} onClose={() => setDebugOpen(false)} />
