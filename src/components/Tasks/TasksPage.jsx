@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useT } from '../../hooks/useT';
 import DataTable from '../Layout/DataTable';
 import {
   useTasks, useCreateTask, useUpdateTask, useDeleteTask,
@@ -72,21 +73,25 @@ function getPeriodRange(period, customFrom, customTo) {
   return { from: '', to: '' };
 }
 
-const TASKS_COLUMNS = [
-  { key: 'task_num',       label: 'מספר',       section: 'כללי',     defaultVisible: true,  sortable: true,  sortField: 'task_num'         },
-  { key: 'subject',        label: 'נושא',        section: 'כללי',     defaultVisible: true,  sortable: true,  sortField: 'subject'           },
-  { key: 'customer',       label: 'לקוח',        section: 'כללי',     defaultVisible: true,  sortable: true,  sortField: '_customer_name'    },
-  { key: 'assignees',      label: 'משויך ל',     section: 'כללי',     defaultVisible: true,  sortable: true,  sortField: '_assignees_label'  },
-  { key: 'start_time',     label: 'שעת התחלה',  section: 'תאריכים', defaultVisible: true,  sortable: true,  sortField: 'start_time'        },
-  { key: 'due_date',       label: 'תאריך יעד',  section: 'תאריכים', defaultVisible: true,  sortable: true,  sortField: 'due_date'          },
-  { key: 'status',         label: 'סטטוס',       section: 'כללי',     defaultVisible: true,  sortable: true,  sortField: 'status'            },
-  { key: 'created_at',     label: 'נוצר',        section: 'תאריכים', defaultVisible: false, sortable: true,  sortField: 'created_at'        },
-  { key: 'description',    label: 'תיאור',       section: 'כללי',     defaultVisible: false, sortable: false                                  },
+const makeCols = (t) => [
+  { key: 'task_num',       label: t('מספר'),       section: t('כללי'),     defaultVisible: true,  sortable: true,  sortField: 'task_num'         },
+  { key: 'subject',        label: t('נושא'),        section: t('כללי'),     defaultVisible: true,  sortable: true,  sortField: 'subject'           },
+  { key: 'customer',       label: t('לקוח'),        section: t('כללי'),     defaultVisible: true,  sortable: true,  sortField: '_customer_name'    },
+  { key: 'assignees',      label: t('משויך ל'),     section: t('כללי'),     defaultVisible: true,  sortable: true,  sortField: '_assignees_label'  },
+  { key: 'start_time',     label: t('שעת התחלה'),  section: t('תאריכים'), defaultVisible: true,  sortable: true,  sortField: 'start_time'        },
+  { key: 'due_date',       label: t('תאריך יעד'),  section: t('תאריכים'), defaultVisible: true,  sortable: true,  sortField: 'due_date'          },
+  { key: 'status',         label: t('סטטוס'),       section: t('כללי'),     defaultVisible: true,  sortable: true,  sortField: 'status'            },
+  { key: 'created_at',     label: t('נוצר'),        section: t('תאריכים'), defaultVisible: false, sortable: true,  sortField: 'created_at'        },
+  { key: 'description',    label: t('תיאור'),       section: t('כללי'),     defaultVisible: false, sortable: false                                  },
 ];
 
 export default function TasksPage() {
+  const { t } = useT();
   const navigate = useNavigate();
+  const TASKS_COLUMNS = useMemo(() => makeCols(t), [t]);
   const { canView, canCreate, canEdit, canDelete } = usePerms('tasks');
+  const authUser = useAuthStore(s => s.user);
+  const isAdmin = authUser?.userType === 'admin' || authUser?.userType === 'superAdmin' || authUser?.user_type === 'admin' || authUser?.user_type === 'superAdmin';
   const [searchParams, setSearchParams] = useSearchParams();
   const [view, setView] = useState('tasks'); // 'tasks' | 'templates'
   const [editItem, setEditItem] = useState(null);
@@ -279,28 +284,32 @@ export default function TasksPage() {
       <div className="tdb-topbar">
         <div className="tdb-topbar-left">
           <span className="tdb-topbar-icon"><i className="ti ti-checkbox" aria-hidden="true" /></span>
-          <h1 className="tdb-topbar-title">ניהול משימות</h1>
+          <h1 className="tdb-topbar-title">{t('ניהול משימות')}</h1>
         </div>
         <div className="tdb-topbar-right">
           <button className="tdb-calendar-btn" onClick={() => navigate('/tasks/dashboard')}>
-            <i className="ti ti-chart-bar" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> דשבורד משימות
+            <i className="ti ti-chart-bar" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> {t('דשבורד משימות')}
           </button>
           <button className="tdb-calendar-btn" onClick={() => setView('templates')}>
-            <i className="ti ti-clipboard-list" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> תבניות פעילויות
+            <i className="ti ti-clipboard-list" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> {t('תבניות פעילויות')}
           </button>
-          <button
-            className="tdb-calendar-btn"
-            onClick={() => { setTaskViewOnly(false); setEditItem({ subject: '', description: '', notes: '', customer_id: '', due_date: '', start_time: '', status: 'new', assignee_ids: [], contact_ids: [] }); }}
-            style={{ background: FO.B600, color: '#fff', borderColor: FO.B600 }}
-          >
-            <i className="ti ti-plus" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> משימה חדשה
-          </button>
+          {canCreate && (
+            <button
+              className="tdb-calendar-btn"
+              onClick={() => { setTaskViewOnly(false); setEditItem({ subject: '', description: '', notes: '', customer_id: '', due_date: '', start_time: '', status: 'new', assignee_ids: [], contact_ids: [] }); }}
+              style={{ background: FO.B600, color: '#fff', borderColor: FO.B600 }}
+            >
+              <i className="ti ti-plus" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> {t('משימה חדשה')}
+            </button>
+          )}
           <button className="tdb-calendar-btn" onClick={() => navigate('/tasks/calendar')}>
-            <i className="ti ti-calendar" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> יומן עובדים
+            <i className="ti ti-calendar" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> {t('יומן עובדים')}
           </button>
-          <button className="tdb-calendar-btn" onClick={() => setShowSettings(true)} title="הגדרות מודול משימות">
-            <i className="ti ti-settings" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> הגדרות
-          </button>
+          {isAdmin && (
+            <button className="tdb-calendar-btn" onClick={() => setShowSettings(true)} title={t('הגדרות מודול משימות')}>
+              <i className="ti ti-settings" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> {t('הגדרות')}
+            </button>
+          )}
         </div>
       </div>
 
@@ -310,9 +319,9 @@ export default function TasksPage() {
         {/* Group filter */}
         {departments.length > 0 && (
           <div className="tdb-filter-group">
-            <label className="tdb-filter-label">קבוצה:</label>
+            <label className="tdb-filter-label">{t('קבוצה:')}</label>
             <select className="tdb-select" value={groupFilter} onChange={e => { setGroupFilter(e.target.value); setEmpFilter([]); }}>
-              <option value="all">כל הקבוצות</option>
+              <option value="all">{t('כל הקבוצות')}</option>
               {departments.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
           </div>
@@ -320,9 +329,9 @@ export default function TasksPage() {
 
         {/* Employee picker */}
         <div className="tdb-filter-group" style={{ position: 'relative' }}>
-          <label className="tdb-filter-label">עובד:</label>
+          <label className="tdb-filter-label">{t('עובד:')}</label>
           <button className="tdb-select tdb-emp-btn" onClick={() => { setEmpPickerOpen(o => !o); setEmpSearch(''); }}>
-            {empFilter.length === 0 ? 'כל העובדים' : `${empFilter.length} עובדים נבחרו`}
+            {empFilter.length === 0 ? t('כל העובדים') : `${empFilter.length} ${t('עובדים נבחרו')}`}
             {empFilter.length > 0 && <span className="tdb-emp-badge">{empFilter.length}</span>}
           </button>
           {empPickerOpen && (
@@ -333,11 +342,11 @@ export default function TasksPage() {
                   value={empSearch}
                   onChange={e => setEmpSearch(e.target.value)}
                   onClick={e => e.stopPropagation()}
-                  placeholder="חיפוש עובד..."
+                  placeholder={t('חיפוש עובד...')}
                   autoFocus
                   style={{ width: '100%', padding: '5px 8px', marginBottom: 6, borderRadius: 6, border: '1.5px solid #C5E3F7', fontSize: 12, boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }}
                 />
-                <div className="tdb-emp-clear" onClick={() => setEmpFilter([])}>× נקה בחירה</div>
+                <div className="tdb-emp-clear" onClick={() => setEmpFilter([])}>{t('× נקה בחירה')}</div>
                 {users
                   .filter(u => u.status !== 'inactive')
                   .filter(u => !empSearch || `${u.first_name || ''} ${u.last_name || ''}`.toLowerCase().includes(empSearch.toLowerCase()))
@@ -358,9 +367,9 @@ export default function TasksPage() {
 
         {/* Status filter */}
         <div className="tdb-filter-group">
-          <label className="tdb-filter-label">סטטוס:</label>
+          <label className="tdb-filter-label">{t('סטטוס:')}</label>
           <select className="tdb-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-            <option value="all">כל הסטטוסים</option>
+            <option value="all">{t('כל הסטטוסים')}</option>
             {statusList.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </div>
@@ -369,8 +378,8 @@ export default function TasksPage() {
         <div className="tdb-toolbar-divider" />
 
         {/* Period buttons */}
-        <span className="tdb-filter-label">תקופה:</span>
-        {[['today', 'היום'], ['week', 'שבוע'], ['month', 'חודש'], ['quarter', 'רבעון'], ['year', 'שנה']].map(([v, l]) => (
+        <span className="tdb-filter-label">{t('תקופה:')}</span>
+        {[['today', t('היום')], ['week', t('שבוע')], ['month', t('חודש')], ['quarter', t('רבעון')], ['year', t('שנה')]].map(([v, l]) => (
           <button
             key={v}
             className={`tdb-period-btn ${period === v ? 'active' : ''}`}
@@ -379,14 +388,14 @@ export default function TasksPage() {
         ))}
         <input type="date" className="tdb-date-input" value={customFrom || range.from}
           onChange={e => { setCustomFrom(e.target.value); setPeriod('custom'); }} />
-        <span className="tdb-filter-label">עד</span>
+        <span className="tdb-filter-label">{t('עד')}</span>
         <input type="date" className="tdb-date-input" value={customTo || range.to}
           onChange={e => { setCustomTo(e.target.value); setPeriod('custom'); }} />
 
         {/* Clear button */}
         {(empFilter.length > 0 || statusFilter !== 'all') && (
           <button className="tdb-ghost-xs" onClick={() => { setEmpFilter([]); setStatusFilter('all'); }}>
-            × נקה
+            {t('× נקה')}
           </button>
         )}
 
@@ -395,10 +404,10 @@ export default function TasksPage() {
       {/* KPI Cards */}
       <div className="tdb-kpi-grid">
         {[
-          { label: 'סה"כ משימות',    value: kpi.total, color: FO.TEXT_DARK, sub: `בתקופה הנבחרת`,               icon: 'ti-clipboard-list' },
-          { label: 'הושלמו',         value: kpi.done,  color: FO.SUCCESS,   sub: `${kpi.total ? Math.round(kpi.done / kpi.total * 100) : 0}% מהסה"כ`, icon: 'ti-circle-check' },
-          { label: 'פתוחות',         value: kpi.open,  color: FO.WARNING,   sub: `ממתינות לביצוע`,              icon: 'ti-hourglass' },
-          { label: 'באיחור',         value: kpi.late,  color: FO.DANGER,    sub: `עברו תאריך יעד`,              icon: 'ti-alert-triangle' },
+          { label: t('סה"כ משימות'),    value: kpi.total, color: FO.TEXT_DARK, sub: t('בתקופה הנבחרת'),               icon: 'ti-clipboard-list' },
+          { label: t('הושלמו'),         value: kpi.done,  color: FO.SUCCESS,   sub: `${kpi.total ? Math.round(kpi.done / kpi.total * 100) : 0}% ${t('מהסה"כ')}`, icon: 'ti-circle-check' },
+          { label: t('פתוחות'),         value: kpi.open,  color: FO.WARNING,   sub: t('ממתינות לביצוע'),              icon: 'ti-hourglass' },
+          { label: t('באיחור'),         value: kpi.late,  color: FO.DANGER,    sub: t('עברו תאריך יעד'),              icon: 'ti-alert-triangle' },
         ].map(k => (
           <div key={k.label} className="tdb-kpi-card">
             <div className="tdb-kpi-header">
@@ -414,10 +423,10 @@ export default function TasksPage() {
       {/* Delete confirmation */}
       {confirmDel && (
         <div style={{ background: '#EF444411', border: '1px solid #EF444433', borderRadius: 10, padding: 12, marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 13, color: '#EF4444' }}>מחיקת משימה {confirmDel.task_num}?</span>
+          <span style={{ fontSize: 13, color: '#EF4444' }}>{t('מחיקת משימה')} {confirmDel.task_num}?</span>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-ghost" onClick={() => setConfirmDel(null)}>ביטול</button>
-            <button className="btn btn-danger" onClick={handleDelete}>מחק</button>
+            <button className="btn btn-ghost" onClick={() => setConfirmDel(null)}>{t('ביטול')}</button>
+            <button className="btn btn-danger" onClick={handleDelete}>{t('מחק')}</button>
           </div>
         </div>
       )}
@@ -447,6 +456,7 @@ export default function TasksPage() {
 
 // ── Task Editor (full page) ──
 function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STATUSES_LIST, statusDefs = TASK_STATUSES_MAP, onClose, viewOnly = false }) {
+  const { t } = useT();
   const navigate = useNavigate();
   const currentUser = useAuthStore(s => s.user);
   const [form, setForm] = useState({
@@ -576,7 +586,7 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
   };
 
   const handleSave = async () => {
-    if (!form.subject?.trim()) { alert('נושא המשימה הוא שדה חובה'); return; }
+    if (!form.subject?.trim()) { alert(t('נושא המשימה הוא שדה חובה')); return; }
     try {
       const payload = {
         subject: form.subject, description: form.description, notes: form.notes,
@@ -609,7 +619,7 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
       }
       onClose();
     } catch (err) {
-      alert(err.message || 'שגיאה בשמירה');
+      alert(err.message || t('שגיאה בשמירה'));
     }
   };
 
@@ -624,19 +634,19 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
       <div className="tdb-topbar">
         <div className="tdb-topbar-left">
           <span className="tdb-topbar-icon"><i className="ti ti-checkbox" aria-hidden="true" /></span>
-          <h1 className="tdb-topbar-title">{viewOnly ? `צפייה — ${initialTask.task_num || ''}` : form.id ? `עריכת משימה — ${initialTask.task_num || ''}` : 'משימה חדשה'}</h1>
-          {viewOnly && <span style={{ fontSize: 11, background: '#FEF3C7', color: '#92400E', border: '1px solid #F59E0B66', borderRadius: 999, padding: '2px 10px', fontWeight: 600 }}>צפייה בלבד</span>}
+          <h1 className="tdb-topbar-title">{viewOnly ? `${t('צפייה —')} ${initialTask.task_num || ''}` : form.id ? `${t('עריכת משימה')} — ${initialTask.task_num || ''}` : t('משימה חדשה')}</h1>
+          {viewOnly && <span style={{ fontSize: 11, background: '#FEF3C7', color: '#92400E', border: '1px solid #F59E0B66', borderRadius: 999, padding: '2px 10px', fontWeight: 600 }}>{t('צפייה בלבד')}</span>}
+          <button className="tdb-calendar-btn" onClick={onClose}>
+            <i className="ti ti-arrow-right" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> {t('חזרה למשימות')}
+          </button>
         </div>
         <div className="tdb-topbar-right">
-          <button className="tdb-calendar-btn" onClick={onClose}>
-            <i className="ti ti-arrow-right" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> חזרה
-          </button>
           {!viewOnly && (
             <button className="tdb-calendar-btn" onClick={handleSave}
               disabled={createMut.isPending || updateMut.isPending || saveActsMut.isPending}
               style={{ background: FO.B600, color: '#fff', borderColor: FO.B600 }}>
               <i className="ti ti-device-floppy" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} />
-              {(createMut.isPending || updateMut.isPending || saveActsMut.isPending) ? 'שומר...' : 'שמור'}
+              {(createMut.isPending || updateMut.isPending || saveActsMut.isPending) ? t('שומר...') : t('שמור')}
             </button>
           )}
         </div>
@@ -644,18 +654,18 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
 
       <fieldset disabled={viewOnly} style={{ border: 'none', padding: 0, margin: 0 }}>
       <div className="card">
-        <h3 className="form-section-title">פרטי משימה</h3>
+        <h3 className="form-section-title">{t('פרטי משימה')}</h3>
         <div className="form-grid">
           <div className="form-field" style={{ gridColumn: '1/-1' }}>
-            <label>נושא המשימה *</label>
+            <label>{t('נושא המשימה *')}</label>
             <input value={form.subject} onChange={e => upd('subject', e.target.value)} autoFocus />
           </div>
           <div className="form-field" style={{ gridColumn: '1/-1' }}>
-            <label>תיאור משימה</label>
+            <label>{t('תיאור משימה')}</label>
             <textarea value={form.description} onChange={e => upd('description', e.target.value)} rows={3} />
           </div>
           <div className="form-field">
-            <label>נוצר ע"י</label>
+            <label>{t('נוצר ע"י')}</label>
             <input
               value={(() => {
                 if (form.id) {
@@ -669,14 +679,14 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
             />
           </div>
           <div className="form-field">
-            <label>שם לקוח</label>
+            <label>{t('שם לקוח')}</label>
             <select value={form.customerId} onChange={e => { upd('customerId', e.target.value); upd('contactIds', []); upd('siteId', ''); upd('address', ''); }}>
-              <option value="">— בחר לקוח —</option>
+              <option value="">{t('— בחר לקוח —')}</option>
               {customers.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
             </select>
           </div>
           <div className="form-field">
-            <label>אתר לקוח</label>
+            <label>{t('אתר לקוח')}</label>
             <select value={form.siteId} onChange={e => {
               const sid = e.target.value;
               const s = sid ? sites.find(x => x.id === sid) : null;
@@ -686,55 +696,55 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
                 address: s ? [s.street, s.city].filter(Boolean).join(', ') : p.address,
               }));
             }} disabled={!form.customerId}>
-              <option value="">— בחר אתר —</option>
+              <option value="">{t('— בחר אתר —')}</option>
               {sites.map(s => <option key={s.id} value={s.id}>{s.site_name}{s.city ? ` (${s.city})` : ''}</option>)}
             </select>
           </div>
           <div className="form-field" style={{ gridColumn: '1/-1' }}>
-            <label>כתובת</label>
-            <input value={form.address} onChange={e => upd('address', e.target.value)} placeholder="כתובת לביצוע המשימה..." />
+            <label>{t('כתובת')}</label>
+            <input value={form.address} onChange={e => upd('address', e.target.value)} placeholder={t('כתובת לביצוע המשימה...')} />
           </div>
           <div className="form-field">
-            <label>תאריך יעד</label>
+            <label>{t('תאריך יעד')}</label>
             <input type="date" value={form.dueDate} onChange={e => upd('dueDate', e.target.value)} dir="ltr" />
           </div>
           <div className="form-field">
-            <label>שעת התחלה</label>
+            <label>{t('שעת התחלה')}</label>
             <input type="time" value={form.startTime} onChange={e => upd('startTime', e.target.value)} dir="ltr" />
           </div>
           <div className="form-field">
-            <label>משך זמן</label>
+            <label>{t('משך זמן')}</label>
             <select value={form.durationMinutes} onChange={e => upd('durationMinutes', e.target.value)}>
-              <option value="">— ללא הגדרה —</option>
-              <option value="15">15 דקות</option>
-              <option value="30">30 דקות</option>
-              <option value="45">45 דקות</option>
-              <option value="60">שעה</option>
-              <option value="90">שעה וחצי</option>
-              <option value="120">שעתיים</option>
-              <option value="180">3 שעות</option>
-              <option value="240">4 שעות</option>
+              <option value="">{t('— ללא הגדרה —')}</option>
+              <option value="15">{t('15 דקות')}</option>
+              <option value="30">{t('30 דקות')}</option>
+              <option value="45">{t('45 דקות')}</option>
+              <option value="60">{t('שעה')}</option>
+              <option value="90">{t('שעה וחצי')}</option>
+              <option value="120">{t('שעתיים')}</option>
+              <option value="180">{t('3 שעות')}</option>
+              <option value="240">{t('4 שעות')}</option>
             </select>
           </div>
           <div className="form-field">
-            <label>סטטוס</label>
+            <label>{t('סטטוס')}</label>
             <select value={form.status} onChange={e => upd('status', e.target.value)}
               style={{ color: statusDefs[form.status]?.color || 'var(--text-1)', fontWeight: 600 }}>
               {statusList.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
           <div className="form-field" style={{ gridColumn: '1/-1' }}>
-            <label>הערות</label>
-            <textarea value={form.notes} onChange={e => upd('notes', e.target.value)} rows={3} placeholder="מידע נוסף על המשימה..." />
+            <label>{t('הערות')}</label>
+            <textarea value={form.notes} onChange={e => upd('notes', e.target.value)} rows={3} placeholder={t('מידע נוסף על המשימה...')} />
           </div>
         </div>
 
         {/* ── Status → Form mapping ── */}
         {allForms.length > 0 && (
           <>
-            <h3 className="form-section-title">שיוך טפסים לסטטוסים</h3>
+            <h3 className="form-section-title">{t('שיוך טפסים לסטטוסים')}</h3>
             <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: -8, marginBottom: 12 }}>
-              כשעובד בשטח יבחר סטטוס מסוים — הטופס המשויך יופיע אוטומטית במסך המשימה.
+              {t('כשעובד בשטח יבחר סטטוס מסוים — הטופס המשויך יופיע אוטומטית במסך המשימה.')}
             </p>
 
             {/* Rows */}
@@ -749,7 +759,7 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
                     )}
                     style={{ flex: 1, minWidth: 0 }}
                   >
-                    <option value="">— בחר סטטוס —</option>
+                    <option value="">{t('— בחר סטטוס —')}</option>
                     {statusList.filter(([v]) => v !== 'new').map(([v, l]) => {
                       const def = statusDefs[v] || {};
                       return <option key={v} value={v}>{l}</option>;
@@ -764,7 +774,7 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
                     )}
                     style={{ flex: 1, minWidth: 0 }}
                   >
-                    <option value="">— בחר טופס —</option>
+                    <option value="">{t('— בחר טופס —')}</option>
                     {allForms.map(f => (
                       <option key={f.id} value={f.id}>{f.name}</option>
                     ))}
@@ -774,7 +784,7 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
                   <button
                     type="button"
                     onClick={() => setStatusFormPairs(p => p.filter((_, i) => i !== idx))}
-                    title="הסר שיוך"
+                    title={t('הסר שיוך')}
                     style={{
                       flexShrink: 0, width: 32, height: 32, borderRadius: 8,
                       border: '1px solid var(--border, #e2e8f0)',
@@ -799,15 +809,15 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
                 fontSize: 13, fontWeight: 600, cursor: 'pointer',
               }}
             >
-              <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> הוסף שיוך טופס לסטטוס
+              <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> {t('הוסף שיוך טופס לסטטוס')}
             </button>
           </>
         )}
 
         {/* ── אנשי קשר של הלקוח (right after notes) ── */}
-        <h3 className="form-section-title">אנשי קשר של הלקוח (בחירה מרובה)</h3>
+        <h3 className="form-section-title">{t('אנשי קשר של הלקוח (בחירה מרובה)')}</h3>
         {!form.customerId ? (
-          <div style={{ padding: 16, color: 'var(--text-3)', textAlign: 'center', fontSize: 13 }}>בחר לקוח תחילה כדי לראות אנשי קשר</div>
+          <div style={{ padding: 16, color: 'var(--text-3)', textAlign: 'center', fontSize: 13 }}>{t('בחר לקוח תחילה כדי לראות אנשי קשר')}</div>
         ) : (() => {
           const q = contactSearch.trim().toLowerCase();
           const availableContacts = contacts.filter(c => !form.contactIds.includes(c.id));
@@ -830,7 +840,7 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
             const address = site ? [site.street, site.city].filter(Boolean).join(', ') : '';
             return (
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600 }}>{contactLabel(c) || '(ללא שם)'}</div>
+                <div style={{ fontWeight: 600 }}>{contactLabel(c) || t('(ללא שם)')}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
                   {c.role && <span style={{ marginLeft: 8 }}><i className="ti ti-briefcase" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> {c.role}</span>}
                   {(c.mobile || c.phone) && <span dir="ltr" style={{ marginLeft: 8 }}><i className="ti ti-device-mobile" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> {c.mobile || c.phone}</span>}
@@ -844,22 +854,22 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
             <>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
                 <input value={contactSearch} onChange={e => setContactSearch(e.target.value)}
-                  placeholder="חיפוש איש קשר לפי שם, טלפון, מייל או אתר..."
+                  placeholder={t('חיפוש איש קשר לפי שם, טלפון, מייל או אתר...')}
                   style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13 }} />
                 {contactSearch && (
-                  <button type="button" className="btn btn-ghost" onClick={() => setContactSearch('')} style={{ fontSize: 12 }}>נקה</button>
+                  <button type="button" className="btn btn-ghost" onClick={() => setContactSearch('')} style={{ fontSize: 12 }}>{t('נקה')}</button>
                 )}
                 <button type="button" className="btn btn-primary"
                   onClick={addSelected} disabled={contactPending.length === 0}
                   style={{ fontSize: 12 }}>
-                  <i className="ti ti-plus" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> הוסף {contactPending.length > 0 ? `(${contactPending.length})` : ''}
+                  <i className="ti ti-plus" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> {t('הוסף')} {contactPending.length > 0 ? `(${contactPending.length})` : ''}
                 </button>
               </div>
               {searchResults.length === 0 ? (
                 <div style={{ padding: 14, color: 'var(--text-3)', textAlign: 'center', fontSize: 13, border: '1px dashed var(--border)', borderRadius: 6 }}>
-                  {q ? 'לא נמצאו אנשי קשר התואמים לחיפוש'
-                    : availableContacts.length === 0 && assignedContacts.length === 0 ? 'אין אנשי קשר ללקוח זה'
-                    : 'כל אנשי הקשר כבר משויכים'}
+                  {q ? t('לא נמצאו אנשי קשר התואמים לחיפוש')
+                    : availableContacts.length === 0 && assignedContacts.length === 0 ? t('אין אנשי קשר ללקוח זה')
+                    : t('כל אנשי הקשר כבר משויכים')}
                 </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 6 }}>
@@ -882,13 +892,13 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
               {assignedContacts.length > 0 && (
                 <div style={{ marginTop: 14, padding: 10, background: 'var(--bg-elevated)', borderRadius: 6 }}>
                   <div style={{ fontSize: 11, color: 'var(--text-2)', marginBottom: 8, fontWeight: 600 }}>
-                    אנשי קשר ששויכו למשימה ({assignedContacts.length}):
+                    {t('אנשי קשר ששויכו למשימה')} ({assignedContacts.length}):
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {assignedContacts.map(c => (
                       <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--accent)11', border: '1px solid var(--accent)44', borderRadius: 8 }}>
                         {contactRow(c)}
-                        <button type="button" onClick={() => toggleContact(c.id)} title="הסר" aria-label="הסר איש קשר"
+                        <button type="button" onClick={() => toggleContact(c.id)} title={t('הסר')} aria-label={t('הסר איש קשר')}
                           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', fontSize: 16, padding: 4 }}><i className="ti ti-x" aria-hidden="true" /></button>
                       </div>
                     ))}
@@ -901,21 +911,21 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
 
         {/* ── פעילויות ── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, marginBottom: 10 }}>
-          <h3 className="form-section-title" style={{ margin: 0 }}>פעילויות ({activities.length})</h3>
-          <button type="button" className="btn btn-secondary" onClick={addActivity} style={{ fontSize: 12 }}><i className="ti ti-plus" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> שורה חדשה</button>
+          <h3 className="form-section-title" style={{ margin: 0 }}>{t('פעילויות')} ({activities.length})</h3>
+          <button type="button" className="btn btn-secondary" onClick={addActivity} style={{ fontSize: 12 }}><i className="ti ti-plus" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> {t('שורה חדשה')}</button>
         </div>
         {activities.length === 0 ? (
           <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-3)', border: '1px dashed var(--border)', borderRadius: 6 }}>
-            אין פעילויות. לחץ "שורה חדשה" כדי להוסיף.
+            {t('אין פעילויות. לחץ "שורה חדשה" כדי להוסיף.')}
           </div>
         ) : (
           <table style={{ width: '100%', fontSize: 12 }}>
             <thead>
               <tr>
-                <th style={{ width: 140 }}>תבנית</th>
-                <th style={{ width: 140 }}>שם עובד</th>
-                <th>תיאור</th>
-                <th style={{ width: 170 }}>מתי בוצע</th>
+                <th style={{ width: 140 }}>{t('תבנית')}</th>
+                <th style={{ width: 140 }}>{t('שם עובד')}</th>
+                <th>{t('תיאור')}</th>
+                <th style={{ width: 170 }}>{t('מתי בוצע')}</th>
                 <th style={{ width: 40 }}></th>
               </tr>
             </thead>
@@ -938,7 +948,7 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
                   </td>
                   <td>
                     <input value={a.description || ''} onChange={e => updActivity(idx, 'description', e.target.value)}
-                      placeholder="תיאור מה בוצע" style={{ width: '100%', padding: 4, fontSize: 12 }} />
+                      placeholder={t('תיאור מה בוצע')} style={{ width: '100%', padding: 4, fontSize: 12 }} />
                   </td>
                   <td>
                     <input type="datetime-local"
@@ -947,7 +957,7 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
                       dir="ltr" style={{ width: '100%', padding: 4, fontSize: 12 }} />
                   </td>
                   <td style={{ textAlign: 'center' }}>
-                    <button type="button" onClick={() => removeActivity(idx)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', fontSize: 14 }} aria-label="הסר פעילות"><i className="ti ti-x" aria-hidden="true" /></button>
+                    <button type="button" onClick={() => removeActivity(idx)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', fontSize: 14 }} aria-label={t('הסר פעילות')}><i className="ti ti-x" aria-hidden="true" /></button>
                   </td>
                 </tr>
               ))}
@@ -956,7 +966,7 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
         )}
 
         {/* ── שיוך לעובדים (after activities) ── */}
-        <h3 className="form-section-title">שיוך לעובדים (בחירה מרובה)</h3>
+        <h3 className="form-section-title">{t('שיוך לעובדים (בחירה מרובה)')}</h3>
         {(() => {
           const q = assigneeSearch.trim().toLowerCase();
           const availableUsers = users.filter(u => !form.assigneeIds.includes(u.id));
@@ -976,20 +986,20 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
             <>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
                 <input value={assigneeSearch} onChange={e => setAssigneeSearch(e.target.value)}
-                  placeholder="חיפוש עובד לפי שם, שם משתמש או מייל..."
+                  placeholder={t('חיפוש עובד לפי שם, שם משתמש או מייל...')}
                   style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13 }} />
                 {assigneeSearch && (
-                  <button type="button" className="btn btn-ghost" onClick={() => setAssigneeSearch('')} style={{ fontSize: 12 }}>נקה</button>
+                  <button type="button" className="btn btn-ghost" onClick={() => setAssigneeSearch('')} style={{ fontSize: 12 }}>{t('נקה')}</button>
                 )}
                 <button type="button" className="btn btn-primary"
                   onClick={addSelected} disabled={assigneePending.length === 0}
                   style={{ fontSize: 12 }}>
-                  <i className="ti ti-plus" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> הוסף {assigneePending.length > 0 ? `(${assigneePending.length})` : ''}
+                  <i className="ti ti-plus" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> {t('הוסף')} {assigneePending.length > 0 ? `(${assigneePending.length})` : ''}
                 </button>
               </div>
               {searchResults.length === 0 ? (
                 <div style={{ padding: 14, color: 'var(--text-3)', textAlign: 'center', fontSize: 13, border: '1px dashed var(--border)', borderRadius: 6 }}>
-                  {q ? 'לא נמצאו עובדים התואמים לחיפוש' : availableUsers.length === 0 ? 'כל העובדים כבר משויכים' : 'אין עובדים להצגה'}
+                  {q ? t('לא נמצאו עובדים התואמים לחיפוש') : availableUsers.length === 0 ? t('כל העובדים כבר משויכים') : t('אין עובדים להצגה')}
                 </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 6 }}>
@@ -1012,13 +1022,13 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
               {assignedUsers.length > 0 && (
                 <div style={{ marginTop: 14, padding: 10, background: 'var(--bg-elevated)', borderRadius: 6 }}>
                   <div style={{ fontSize: 11, color: 'var(--text-2)', marginBottom: 8, fontWeight: 600 }}>
-                    עובדים ששויכו למשימה ({assignedUsers.length}):
+                    {t('עובדים ששויכו למשימה')} ({assignedUsers.length}):
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {assignedUsers.map(u => (
                       <span key={u.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', background: 'var(--accent)22', color: 'var(--accent)', border: '1px solid var(--accent)44', borderRadius: 14, fontSize: 12, fontWeight: 600 }}>
                         {userName(u.id)}
-                        <button type="button" onClick={() => toggleAssignee(u.id)} title="הסר" aria-label="הסר עובד"
+                        <button type="button" onClick={() => toggleAssignee(u.id)} title={t('הסר')} aria-label={t('הסר עובד')}
                           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', fontSize: 14, padding: 0, lineHeight: 1 }}><i className="ti ti-x" aria-hidden="true" /></button>
                       </span>
                     ))}
@@ -1037,20 +1047,20 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
           ) : (
             // Creating new task — picker: forms will be attached on save
             <>
-              <h3 className="form-section-title">טפסים לצירוף</h3>
+              <h3 className="form-section-title">{t('טפסים לצירוף')}</h3>
               <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                 <input
                   value={formSearch} onChange={e => setFormSearch(e.target.value)}
-                  placeholder="חיפוש טופס..."
+                  placeholder={t('חיפוש טופס...')}
                   style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13 }}
                 />
                 {formSearch && (
-                  <button type="button" className="btn btn-ghost" onClick={() => setFormSearch('')} style={{ fontSize: 12 }}>נקה</button>
+                  <button type="button" className="btn btn-ghost" onClick={() => setFormSearch('')} style={{ fontSize: 12 }}>{t('נקה')}</button>
                 )}
               </div>
               {allForms.length === 0 ? (
                 <div style={{ padding: 14, color: 'var(--text-3)', textAlign: 'center', fontSize: 13, border: '1px dashed var(--border)', borderRadius: 6 }}>
-                  טוען טפסים...
+                  {t('טוען טפסים...')}
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 220, overflowY: 'auto' }}>
@@ -1073,7 +1083,7 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
                             <div style={{ fontWeight: 600 }}>{f.name}</div>
                             {f.form_num && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{f.form_num}</div>}
                           </div>
-                          {sel && <span style={{ color: 'var(--accent)', fontWeight: 600, fontSize: 12 }}><i className="ti ti-check" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> יצורף בשמירה</span>}
+                          {sel && <span style={{ color: 'var(--accent)', fontWeight: 600, fontSize: 12 }}><i className="ti ti-check" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> {t('יצורף בשמירה')}</span>}
                         </label>
                       );
                     })}
@@ -1090,6 +1100,7 @@ function TaskEditor({ task: initialTask, users, customers, statusList = TASK_STA
 
 // ── Activity Templates Page ──
 function TemplatesPage({ onBack }) {
+  const { t } = useT();
   const navigate = useNavigate();
   const { data, isLoading } = useActivityTemplates();
   const createMut = useCreateActivityTemplate();
@@ -1102,50 +1113,50 @@ function TemplatesPage({ onBack }) {
   const templates = data?.data || [];
 
   const handleSave = async () => {
-    if (!form.name?.trim()) { alert('שם פעילות הוא שדה חובה'); return; }
+    if (!form.name?.trim()) { alert(t('שם פעילות הוא שדה חובה')); return; }
     try {
       if (form.id) await updateMut.mutateAsync(form);
       else await createMut.mutateAsync(form);
       setForm(null);
-    } catch (err) { alert(err.message || 'שגיאה'); }
+    } catch (err) { alert(err.message || t('שגיאה')); }
   };
 
   const handleDelete = async () => {
     try { await deleteMut.mutateAsync(confirmDel.id); setConfirmDel(null); }
-    catch (err) { alert(err.message || 'שגיאה'); }
+    catch (err) { alert(err.message || t('שגיאה')); }
   };
 
   return (
     <div className="animate-in">
       <div className="editor-topbar">
-        <button className="btn btn-ghost" onClick={() => navigate('/tasks/dashboard')}><Icon svg={ICONS.back} size={16} /> חזרה</button>
-        <div className="editor-topbar-title"><h1>תבניות פעילויות במשימה</h1></div>
-        <button className="btn btn-primary" onClick={() => setForm({ name: '', description: '' })}><i className="ti ti-plus" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> תבנית חדשה</button>
+        <button className="btn btn-ghost" onClick={() => navigate('/tasks/dashboard')}><Icon svg={ICONS.back} size={16} /> {t('חזרה')}</button>
+        <div className="editor-topbar-title"><h1>{t('תבניות פעילויות במשימה')}</h1></div>
+        <button className="btn btn-primary" onClick={() => setForm({ name: '', description: '' })}><i className="ti ti-plus" aria-hidden="true" style={{ verticalAlign: '-2px', marginLeft: 4 }} /> {t('תבנית חדשה')}</button>
       </div>
 
       {form && (
         <div className="card" style={{ marginBottom: 12 }}>
-          <h3 className="form-section-title">{form.id ? 'עריכת תבנית' : 'תבנית חדשה'}</h3>
+          <h3 className="form-section-title">{form.id ? t('עריכת תבנית') : t('תבנית חדשה')}</h3>
           <div className="form-grid">
-            <div className="form-field"><label>שם פעילות *</label><input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} autoFocus /></div>
+            <div className="form-field"><label>{t('שם פעילות *')}</label><input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} autoFocus /></div>
           </div>
           <div className="form-field" style={{ marginTop: 12 }}>
-            <label>תיאור פעילות</label>
+            <label>{t('תיאור פעילות')}</label>
             <textarea value={form.description || ''} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={2} />
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <button className="btn btn-primary" onClick={handleSave} disabled={createMut.isPending || updateMut.isPending}>שמור</button>
-            <button className="btn btn-ghost" onClick={() => setForm(null)}>ביטול</button>
+            <button className="btn btn-primary" onClick={handleSave} disabled={createMut.isPending || updateMut.isPending}>{t('שמור')}</button>
+            <button className="btn btn-ghost" onClick={() => setForm(null)}>{t('ביטול')}</button>
           </div>
         </div>
       )}
 
       {confirmDel && (
         <div style={{ background: '#EF444411', border: '1px solid #EF444433', borderRadius: 10, padding: 12, marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 13, color: '#EF4444' }}>מחיקת תבנית "{confirmDel.name}"?</span>
+          <span style={{ fontSize: 13, color: '#EF4444' }}>{t('מחיקת תבנית')} "{confirmDel.name}"?</span>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-ghost" onClick={() => setConfirmDel(null)}>ביטול</button>
-            <button className="btn btn-danger" onClick={handleDelete}>מחק</button>
+            <button className="btn btn-ghost" onClick={() => setConfirmDel(null)}>{t('ביטול')}</button>
+            <button className="btn btn-danger" onClick={handleDelete}>{t('מחק')}</button>
           </div>
         </div>
       )}
@@ -1154,23 +1165,23 @@ function TemplatesPage({ onBack }) {
         <table style={{ width: '100%', fontSize: 13 }}>
           <thead>
             <tr style={{ background: 'var(--bg-elevated)', borderBottom: '2px solid var(--border)' }}>
-              <th style={{ padding: 10, textAlign: 'right' }}>שם פעילות</th>
-              <th style={{ padding: 10, textAlign: 'right' }}>תיאור</th>
-              <th style={{ padding: 10, textAlign: 'center', width: 100 }}>פעולות</th>
+              <th style={{ padding: 10, textAlign: 'right' }}>{t('שם פעילות')}</th>
+              <th style={{ padding: 10, textAlign: 'right' }}>{t('תיאור')}</th>
+              <th style={{ padding: 10, textAlign: 'center', width: 100 }}>{t('פעולות')}</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan="3" style={{ padding: 20, textAlign: 'center' }}>טוען...</td></tr>
+              <tr><td colSpan="3" style={{ padding: 20, textAlign: 'center' }}>{t('טוען...')}</td></tr>
             ) : templates.length === 0 ? (
-              <tr><td colSpan="3" style={{ padding: 30, textAlign: 'center', color: 'var(--text-3)' }}>אין תבניות פעילות</td></tr>
-            ) : templates.map(t => (
-              <tr key={t.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td style={{ padding: 10, fontWeight: 600 }}>{t.name}</td>
-                <td style={{ padding: 10, color: 'var(--text-2)' }}>{t.description || '—'}</td>
+              <tr><td colSpan="3" style={{ padding: 30, textAlign: 'center', color: 'var(--text-3)' }}>{t('אין תבניות פעילות')}</td></tr>
+            ) : templates.map(tmpl => (
+              <tr key={tmpl.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                <td style={{ padding: 10, fontWeight: 600 }}>{tmpl.name}</td>
+                <td style={{ padding: 10, color: 'var(--text-2)' }}>{tmpl.description || '—'}</td>
                 <td style={{ padding: 10, textAlign: 'center' }}>
-                  <button onClick={() => setForm(t)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, padding: 4 }} title="ערוך" aria-label="ערוך תבנית"><i className="ti ti-edit" aria-hidden="true" /></button>
-                  <button onClick={() => setConfirmDel(t)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, padding: 4 }} title="מחק" aria-label="מחק תבנית"><i className="ti ti-trash" aria-hidden="true" /></button>
+                  <button onClick={() => setForm(tmpl)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, padding: 4 }} title={t('ערוך תבנית')} aria-label={t('ערוך תבנית')}><i className="ti ti-edit" aria-hidden="true" /></button>
+                  <button onClick={() => setConfirmDel(tmpl)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, padding: 4 }} title={t('מחק תבנית')} aria-label={t('מחק תבנית')}><i className="ti ti-trash" aria-hidden="true" /></button>
                 </td>
               </tr>
             ))}
