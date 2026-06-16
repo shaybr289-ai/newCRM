@@ -1028,7 +1028,7 @@ export default function ScreenDesignerModal({ moduleId, modMeta: initModMeta, on
               <i className={`ti ${reg.icon}`} aria-hidden="true" />
             </div>
             <div>
-              <h2 style={{ fontSize: 17 }}>עורך מסך</h2>
+              <h2 style={{ fontSize: 17 }}>עורך שדות</h2>
               <div className="sd-module-subtitle">{reg.label}</div>
             </div>
           </div>
